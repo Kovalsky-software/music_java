@@ -1,19 +1,35 @@
 package org.example.vp_final;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.Label;
+import javafx.scene.input.MouseEvent;
+import javafx.stage.Stage;
+import javafx.scene.Scene;
+import javafx.fxml.FXMLLoader;
 
 public class HomeController {
-    @FXML private Label welcomeText;
+
+    private MainController mainController; // будет установлен из MainController
     private User currentUser;
+
+    public void setMainController(MainController mainController) {
+        this.mainController = mainController;
+    }
 
     public void setUser(User user) {
         this.currentUser = user;
-        welcomeText.setText("Привет, " + user.username() + "!\nДобро пожаловать домой!");
     }
 
     @FXML
-    private void onHelloButtonClick() {
-        welcomeText.setText("Кнопка нажата!\nПривет ещё раз, " + currentUser.username() + "!");
+    private void onMainAction() {
+        // Здесь будет главное действие приложения
+        System.out.println("Запуск основного действия для пользователя: " + currentUser.username());
+        // Можно открыть новое окно, модальное окно и т.д.
+    }
+
+    @FXML
+    private void openProfile(MouseEvent event) {
+        if (mainController != null) {
+            mainController.showProfile();
+        }
     }
 }

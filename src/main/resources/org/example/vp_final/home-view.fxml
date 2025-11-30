@@ -1,13 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.*?>
 
-<VBox alignment="CENTER" spacing="30" style="-fx-background-color: #f8f9fa;"
-      xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.vp_final.HomeController">
+<ScrollPane fitToWidth="true" style="-fx-background-color: #f8f9fa;"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.example.vp_final.HomeController">
 
-    <Label fx:id="welcomeText" style="-fx-font-size: 22; -fx-font-weight: bold;" wrapText="true" textAlignment="CENTER"/>
+    <VBox spacing="30" style="-fx-background-color: #f8f9fa;">
 
-    <Button text="Нажми меня!" onAction="#onHelloButtonClick"
-            style="-fx-font-size: 16; -fx-pref-width: 220; -fx-pref-height: 50; -fx-background-color: #3498db; -fx-text-fill: white;"/>
-</VBox>
+        <padding>
+            <Insets top="30" right="20" bottom="40" left="20"/>
+        </padding>
+
+        <!-- Заголовок с курсором HAND -->
+        <Label text="Моё Приложение"
+               style="-fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-cursor: hand;"
+               onMouseClicked="#openProfile"/>
+
+        <!-- Кнопка ЗАПУСТИТЬ -->
+        <VBox alignment="CENTER" spacing="15">
+            <Button text="ЗАПУСТИТЬ" onAction="#onMainAction"
+                    prefWidth="300" prefHeight="90"
+                    style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 26; -fx-font-weight: bold;
+                           -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 5);"/>
+            <Label text="Нажми, чтобы начать" style="-fx-text-fill: #7f8c8d;"/>
+        </VBox>
+
+        <!-- Новое -->
+        <VBox spacing="12">
+            <Label text="Новое" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator/>
+            <FlowPane hgap="15" vgap="15">
+                <Label text="Контент 1" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 25; -fx-background-radius: 12;"/>
+                <Label text="Контент 2" style="-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-padding: 25; -fx-background-radius: 12;"/>
+                <Label text="Контент 3" style="-fx-background-color: #1abc9c; -fx-text-fill: white; -fx-padding: 25; -fx-background-radius: 12;"/>
+            </FlowPane>
+        </VBox>
+
+        <!-- Любимое -->
+        <VBox spacing="12">
+            <Label text="Любимое" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator/>
+            <Label text="Тут будет твой плейлист ❤️" style="-fx-font-size: 18; -fx-text-fill: #7f8c8d;"/>
+        </VBox>
+
+        <!-- Афиша -->
+        <VBox spacing="12">
+            <Label text="Афиша" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator/>
+            <TilePane hgap="15" vgap="15">
+                <VBox alignment="CENTER" style="-fx-background-color: #ecf0f1; -fx-padding: 20; -fx-background-radius: 15;">
+                    <Label text="27 декабря" style="-fx-font-weight: bold;"/>
+                    <Label text="Концерт в Москве"/>
+                </VBox>
+                <VBox alignment="CENTER" style="-fx-background-color: #ecf0f1; -fx-padding: 20; -fx-background-radius: 15;">
+                    <Label text="31 декабря" style="-fx-font-weight: bold;"/>
+                    <Label text="Новогодняя вечеринка"/>
+                </VBox>
+            </TilePane>
+        </VBox>
+
+        <Region prefHeight="100"/> <!-- Отступ снизу -->
+    </VBox>
+</ScrollPane>

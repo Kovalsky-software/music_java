@@ -1,7 +1,6 @@
 package org.example.vp_final;
 
 import javafx.fxml.FXML;
-import javafx.scene.layout.StackPane;
 
 public class BottomNavController {
     private MainController mainController;

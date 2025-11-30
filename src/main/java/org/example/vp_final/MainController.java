@@ -2,13 +2,17 @@ package org.example.vp_final;
 
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.layout.StackPane;
 import javafx.scene.Node;
-
+import javafx.scene.layout.StackPane;
 import java.io.IOException;
 
 public class MainController {
+
     @FXML private StackPane contentArea;
+
+    // ВАЖНО: получаем включённый bottom-nav через @FXML + fx:id
+    @FXML private BottomNavController bottomNavController;
+
     private Node homeView, searchView, profileView;
     private User currentUser;
 
@@ -17,38 +21,36 @@ public class MainController {
 
     @FXML
     private void initialize() throws IOException {
-        FXMLLoader homeLoader = new FXMLLoader(
-                getClass().getResource("/org/example/vp_final/home-view.fxml")
-        );
+        // Загружаем все три экрана
+        FXMLLoader homeLoader = new FXMLLoader(getClass().getResource("/org/example/vp_final/home-view.fxml"));
         homeView = homeLoader.load();
         homeController = homeLoader.getController();
+        homeController.setMainController(this);
 
-        FXMLLoader searchLoader = new FXMLLoader(
-                getClass().getResource("/org/example/vp_final/search-view.fxml")
-        );
+        FXMLLoader searchLoader = new FXMLLoader(getClass().getResource("/org/example/vp_final/search-view.fxml"));
         searchView = searchLoader.load();
 
-        FXMLLoader profileLoader = new FXMLLoader(
-                getClass().getResource("/org/example/vp_final/profile-view.fxml")
-        );
+        FXMLLoader profileLoader = new FXMLLoader(getClass().getResource("/org/example/vp_final/profile-view.fxml"));
         profileView = profileLoader.load();
         profileController = profileLoader.getController();
 
-        // Нижнее меню
-        FXMLLoader navLoader = new FXMLLoader(
-                getClass().getResource("/org/example/vp_final/bottom-nav.fxml")
-        );
-        Node bottomNav = navLoader.load();
-        BottomNavController navController = navLoader.getController();
-        navController.setMainController(this);
+        // Передаём пользователю данные
+        if (currentUser != null) {
+            homeController.setUser(currentUser);
+            profileController.setUser(currentUser);
+        }
 
+        // Подключаем нижнее меню к главному контроллеру
+        bottomNavController.setMainController(this);
+
+        // Открываем домашний экран по умолчанию
         showHome();
     }
 
     public void setUser(User user) {
         this.currentUser = user;
-        homeController.setUser(user);
-        profileController.setUser(user);
+        if (homeController != null) homeController.setUser(user);
+        if (profileController != null) profileController.setUser(user);
     }
 
     public void showHome() {
