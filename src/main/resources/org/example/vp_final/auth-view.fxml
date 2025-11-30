@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:controller="org.example.vp_final.AuthController"
+      xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      alignment="CENTER" spacing="20" style="-fx-background-color: #34495e;"
+      prefWidth="420" prefHeight="550">
+
+    <padding><Insets top="50" right="50" bottom="50" left="50"/></padding>
+
+    <Label text="Вход в систему" style="-fx-font-size: 28; -fx-text-fill: white; -fx-font-weight: bold;"/>
+
+    <TextField fx:id="usernameField" promptText="Логин" prefWidth="280"/>
+    <PasswordField fx:id="passwordField" promptText="Пароль" prefWidth="280"/>
+
+    <HBox spacing="20" alignment="CENTER">
+        <Button text="Войти" onAction="#onLogin" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14; -fx-pref-width: 120;"/>
+        <Button text="Регистрация" onAction="#onRegister" style="-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-size: 14; -fx-pref-width: 120;"/>
+    </HBox>
+
+    <Label fx:id="messageLabel" textFill="#e74c3c" style="-fx-font-size: 14;" minHeight="30"/>
+</VBox>

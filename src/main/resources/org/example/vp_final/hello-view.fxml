@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="CENTER" spacing="30.0"
+      xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.vp_final.MainController"
+      style="-fx-background-color: #f8f9fa;">
+
+    <padding>
+        <Insets top="40" right="40" bottom="40" left="40"/>
+    </padding>
+
+    <Label fx:id="welcomeText"
+           style="-fx-font-size: 20; -fx-font-weight: bold; -fx-text-alignment: center;"
+           wrapText="true"/>
+
+    <Button text="Нажми меня!" onAction="#onHelloButtonClick"
+            style="-fx-font-size: 16; -fx-pref-width: 200; -fx-pref-height: 50;"/>
+</VBox>
