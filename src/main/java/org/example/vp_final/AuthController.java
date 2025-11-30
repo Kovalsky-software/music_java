@@ -53,15 +53,18 @@ public class AuthController {
 
     private void openMainScreen(User user) {
         try {
-            FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource("hello-view.fxml"));
-            Scene scene = new Scene(loader.load(), 600, 400);
+            FXMLLoader loader = new FXMLLoader(
+                    MainApplication.class.getResource("/org/example/vp_final/main-layout.fxml")
+            );
+            Scene scene = new Scene(loader.load(), 600, 700);
 
             MainController controller = loader.getController();
             controller.setUser(user);
 
             Stage stage = (Stage) usernameField.getScene().getWindow();
             stage.setScene(scene);
-            stage.setTitle("Главная — " + user.username());
+            stage.setTitle("Моё приложение");
+            stage.setResizable(false);
             stage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();

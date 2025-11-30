@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="CENTER" spacing="30" style="-fx-background-color: #f8f9fa;"
+      xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.vp_final.HomeController">
+
+    <Label fx:id="welcomeText" style="-fx-font-size: 22; -fx-font-weight: bold;" wrapText="true" textAlignment="CENTER"/>
+
+    <Button text="Нажми меня!" onAction="#onHelloButtonClick"
+            style="-fx-font-size: 16; -fx-pref-width: 220; -fx-pref-height: 50; -fx-background-color: #3498db; -fx-text-fill: white;"/>
+</VBox>

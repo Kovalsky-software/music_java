@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.fxml.FXMLLoader?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.vp_final.MainController"
+            style="-fx-background-color: #f8f9fa;">
+
+    <center>
+        <StackPane fx:id="contentArea" />
+    </center>
+
+    <bottom>
+        <fx:include source="bottom-nav.fxml" />
+    </bottom>
+</BorderPane>

@@ -10,9 +10,11 @@ import java.io.IOException;
 public class MainApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
-        DatabaseHelper.initDatabase(); // создаём БД при старте
+        DatabaseHelper.initDatabase();
 
-        FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource("auth-view.fxml"));
+        FXMLLoader loader = new FXMLLoader(
+                MainApplication.class.getResource("/org/example/vp_final/auth-view.fxml")
+        );
         Scene scene = new Scene(loader.load(), 420, 550);
         stage.setTitle("Авторизация");
         stage.setResizable(false);

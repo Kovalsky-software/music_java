@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="CENTER" spacing="20" style="-fx-background-color: #f8f9fa;"
+      xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.vp_final.SearchController">
+
+    <Label text="Поиск" style="-fx-font-size: 28; -fx-font-weight: bold;"/>
+
+    <TextField promptText="Введите запрос..." prefWidth="300"/>
+
+    <ListView fx:id="resultsList" prefHeight="300" prefWidth="350"/>
+</VBox>

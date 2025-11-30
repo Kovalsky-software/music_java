@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.geometry.Insets?>
+
+<VBox alignment="TOP_CENTER" spacing="25" style="-fx-background-color: #f8f9fa; -fx-padding: 40;"
+      xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.vp_final.ProfileController">
+
+    <Label fx:id="usernameLabel" style="-fx-font-size: 26; -fx-font-weight: bold;"/>
+
+    <Label text="ID в системе:"/>
+    <Label fx:id="idLabel" style="-fx-font-size: 18;"/>
+
+    <Separator/>
+
+    <Button text="Выйти из аккаунта" onAction="#onLogout"
+            style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 16; -fx-pref-width: 200;"/>
+</VBox>
