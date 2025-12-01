@@ -150,7 +150,7 @@ public class SearchController implements Initializable {
         }
 
         tracksSection.setVisible(true);
-        tracksSection.setManaged(true);
+        //tracksSection.setManaged(true);
     }
 
     private String formatDuration(int seconds) {
