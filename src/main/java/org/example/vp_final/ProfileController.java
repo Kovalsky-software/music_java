@@ -5,7 +5,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.stage.Stage;
-
 import java.io.IOException;
 
 public class ProfileController {
@@ -18,7 +17,7 @@ public class ProfileController {
     public void setUser(User user) {
         this.currentUser = user;
         usernameLabel.setText(user.username());
-        idLabel.setText(String.valueOf(user.id()));
+        idLabel.setText(String.valueOf(user.userId()));
     }
 
     @FXML

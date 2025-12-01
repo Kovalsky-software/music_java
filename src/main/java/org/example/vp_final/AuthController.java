@@ -32,12 +32,14 @@ public class AuthController {
         }
 
         if (register) {
-            if (DatabaseHelper.registerUser(username, password)) {
+            // Теперь нужно запрашивать email тоже! Пока можно захардкодить или добавить поле.
+            // Пример с временным email:
+            if (DatabaseHelper.registerUser(username, username + "@example.com", password)) {
                 messageLabel.setTextFill(javafx.scene.paint.Color.LIMEGREEN);
                 messageLabel.setText("Регистрация успешна!");
             } else {
                 messageLabel.setTextFill(javafx.scene.paint.Color.web("#e74c3c"));
-                messageLabel.setText("Такой пользователь уже есть!");
+                messageLabel.setText("Пользователь или email уже существует!");
                 return;
             }
         }

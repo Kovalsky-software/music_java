@@ -1,19 +1,116 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<VBox alignment="TOP_CENTER" spacing="25" style="-fx-background-color: #f8f9fa; -fx-padding: 40;"
-      xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.vp_final.ProfileController">
+<ScrollPane fitToWidth="true"
+            style="-fx-background-color: #f8f9fa;"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.example.vp_final.ProfileController">
 
-    <Label fx:id="usernameLabel" style="-fx-font-size: 26; -fx-font-weight: bold;"/>
+    <VBox alignment="TOP_CENTER"
+          spacing="30"
+          style="-fx-background-color: #f8f9fa;">
 
-    <Label text="ID в системе:"/>
-    <Label fx:id="idLabel" style="-fx-font-size: 18;"/>
+        <padding>
+            <Insets top="40" right="40" bottom="100" left="40"/>
+        </padding>
 
-    <Separator/>
+        <!-- === ШАПКА ПРОФИЛЯ === -->
+        <VBox alignment="CENTER" spacing="10">
+            <Label fx:id="usernameLabel"
+                   style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Label text="ID в системе:" style="-fx-text-fill: #7f8c8d;"/>
+            <Label fx:id="idLabel"
+                   style="-fx-font-size: 18; -fx-text-fill: #2c3e50;"/>
+        </VBox>
 
-    <Button text="Выйти из аккаунта" onAction="#onLogout"
-            style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 16; -fx-pref-width: 200;"/>
-</VBox>
+        <Separator prefWidth="300"/>
+
+        <!-- Кнопка выхода -->
+        <Button text="Выйти из аккаунта"
+                onAction="#onLogout"
+                style="-fx-background-color: #e74c3c; -fx-text-fill: white;
+                       -fx-font-size: 16; -fx-font-weight: bold;
+                       -fx-pref-width: 250; -fx-pref-height: 50;
+                       -fx-background-radius: 12;"/>
+
+        <!-- === НРАВИТСЯ === -->
+        <VBox spacing="12">
+            <Label text="Нравится" style="-fx-font-size: 22; -fx-font-weight: bold;"/>
+            <Separator prefWidth="300"/>
+            <FlowPane hgap="15" vgap="15" alignment="CENTER">
+                <VBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: #3498db; -fx-padding: 18; -fx-background-radius: 12;">
+                    <Label text="Трек 1" style="-fx-text-fill: white; -fx-font-weight: bold;"/>
+                    <Label text="Артист А" style="-fx-text-fill: #bdc3c7;"/>
+                </VBox>
+                <VBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: #9b59b6; -fx-padding: 18; -fx-background-radius: 12;">
+                    <Label text="Трек 2" style="-fx-text-fill: white; -fx-font-weight: bold;"/>
+                    <Label text="Группа XYZ" style="-fx-text-fill: #bdc3c7;"/>
+                </VBox>
+                <VBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: #1abc9c; -fx-padding: 18; -fx-background-radius: 12;">
+                    <Label text="Трек 3" style="-fx-text-fill: white; -fx-font-weight: bold;"/>
+                    <Label text="Солист" style="-fx-text-fill: #bdc3c7;"/>
+                </VBox>
+            </FlowPane>
+        </VBox>
+
+        <VBox spacing="12">
+            <Label text="Любимые авторы" style="-fx-font-size: 22; -fx-font-weight: bold;"/>
+            <Separator prefWidth="300"/>
+            <TilePane hgap="25" vgap="20" alignment="CENTER">
+                <VBox alignment="CENTER" spacing="10">
+                    <Circle radius="45" fill="#e74c3c"/>
+                    <Label text="Артист А"/>
+                </VBox>
+                <VBox alignment="CENTER" spacing="10">
+                    <Circle radius="45" fill="#3498db"/>
+                    <Label text="Группа Б"/>
+                </VBox>
+                <VBox alignment="CENTER" spacing="10">
+                    <Circle radius="45" fill="#9b59b6"/>
+                    <Label text="Дуэт"/>
+                </VBox>
+            </TilePane>
+        </VBox>
+
+        <!-- === ПЛЕЙЛИСТЫ === -->
+        <VBox spacing="12">
+            <Label text="Мои плейлисты" style="-fx-font-size: 22; -fx-font-weight: bold;"/>
+            <Separator prefWidth="300"/>
+            <VBox spacing="10">
+                <Label text="Летний вайб · 24 трека"
+                       style="-fx-padding: 12; -fx-background-color: #ecf0f1; -fx-background-radius: 10;"/>
+                <Label text="Для тренировок · 18 треков"
+                       style="-fx-padding: 12; -fx-background-color: #ecf0f1; -fx-background-radius: 10;"/>
+                <Label text="Чилловый вечер · 31 трек"
+                       style="-fx-padding: 12; -fx-background-color: #ecf0f1; -fx-background-radius: 10;"/>
+            </VBox>
+        </VBox>
+
+        <!-- === НАСТРОЙКИ === -->
+        <VBox spacing="12">
+            <Label text="Настройки" style="-fx-font-size: 22; -fx-font-weight: bold;"/>
+            <Separator prefWidth="300"/>
+            <VBox spacing="8">
+                <Button text="Тема приложения"
+                        style="-fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-font-size: 16; -fx-pref-width: 350;"/>
+                <Button text="Уведомления"
+                        style="-fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-font-size: 16; -fx-pref-width: 350;"/>
+                <Button text="Конфиденциальность"
+                        style="-fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-font-size: 16; -fx-pref-width: 350;"/>
+                <Button text="О приложении"
+                        style="-fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-font-size: 16; -fx-pref-width: 350;"/>
+            </VBox>
+        </VBox>
+
+        <!-- Нижний отступ, чтобы контент не перекрывался нижним меню -->
+        <Region prefHeight="120"/>
+
+    </VBox>
+</ScrollPane>
