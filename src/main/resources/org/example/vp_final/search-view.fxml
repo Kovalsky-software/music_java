@@ -3,57 +3,66 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
 
-<ScrollPane fitToWidth="false" fitToHeight="true"
+<ScrollPane fitToWidth="true" fitToHeight="true"
             hbarPolicy="AS_NEEDED" vbarPolicy="ALWAYS"
             style="-fx-background-color: #f8f9fa;"
+            xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="org.example.vp_final.SearchController">
-
+            fx:controller="org.example.vp_final.SearchController"> <content>
     <VBox alignment="TOP_CENTER" spacing="30" style="-fx-background-color: #f8f9fa;" minWidth="600">
 
         <padding>
             <Insets top="40" right="40" bottom="100" left="40"/>
         </padding>
 
-    <Label text="Поиск" style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+        <Label text="Поиск" style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #2c3e50;">
+            <font>
+                <Font size="28.0" />
+            </font>
+        </Label>
 
-    <TextField fx:id="searchField" promptText="Исполнители, треки, альбомы..." prefWidth="340" prefHeight="45"
-               style="-fx-background-radius: 25; -fx-padding: 0 20 0 20; -fx-font-size: 15;"/>
+        <TextField fx:id="searchField" promptText="Исполнители, треки, альбомы..." prefWidth="340" prefHeight="45"
+                   style="-fx-background-radius: 25; -fx-padding: 0 20 0 20; -fx-font-size: 15;"/>
 
-        <!-- ЖАНРЫ (гарантированно видно и красиво)-->
-            <VBox spacing="16" VBox.vgrow="ALWAYS">
-                <Label text="Жанры"
-                       style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+        <VBox spacing="16" alignment="TOP_LEFT" VBox.vgrow="ALWAYS">
+            <Label text="Жанры"
+                   style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
 
-                <ScrollPane hbarPolicy="ALWAYS"
-                            vbarPolicy="NEVER"
-                            fitToHeight="true"
-                            style="-fx-background: transparent; -fx-background-color: transparent;"
-                            VBox.vgrow="ALWAYS">
+            <ScrollPane hbarPolicy="ALWAYS"
+                        vbarPolicy="NEVER"
+                        fitToHeight="true"
+                        minHeight="260"
+                        style="-fx-background: transparent; -fx-background-color: transparent;"
+                        VBox.vgrow="ALWAYS">
 
+                <content>
                     <HBox fx:id="genresContainer"
                           spacing="20"
                           alignment="CENTER_LEFT"
-                          minHeight="220">   <!-- ЭТО ГЛАВНОЕ! -->
+                          minHeight="220">
 
-                    <padding>
-                        <Insets top="20" right="30" bottom="20" left="20"/>
-                    </padding>
-                </HBox>
-                </ScrollPane>
-            </VBox>
+                        <padding>
+                            <Insets top="20" right="30" bottom="20" left="20"/>
+                        </padding>
+                    </HBox>
+                </content>
+            </ScrollPane>
+        </VBox>
 
-    <!-- ТРЕКИ ПО ЖАНРУ -->
-    <VBox spacing="12" visible="false" managed="false" fx:id="tracksSection">
-        <Label fx:id="genreTitleLabel" text="Треки жанра: Поп"
-               style="-fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-        <Separator/>
+        <VBox spacing="12" visible="false" managed="false" fx:id="tracksSection" alignment="TOP_LEFT">
+            <Label fx:id="genreTitleLabel" text="Треки жанра: Поп"
+                   style="-fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator/>
 
-        <ScrollPane vbarPolicy="ALWAYS" hbarPolicy="AS_NEEDED" fitToWidth="true" prefHeight="350" maxHeight="400">
-            <VBox fx:id="tracksContainer" spacing="12" style="-fx-padding: 15;"/>
-        </ScrollPane>
+            <ScrollPane vbarPolicy="ALWAYS" hbarPolicy="AS_NEEDED" fitToWidth="true" prefHeight="350" maxHeight="400">
+                <content>
+                    <VBox fx:id="tracksContainer" spacing="12" style="-fx-padding: 15;"/>
+                </content>
+            </ScrollPane>
+        </VBox>
+
     </VBox>
-
-</VBox>
-        </ScrollPane>
+</content>
+</ScrollPane>
