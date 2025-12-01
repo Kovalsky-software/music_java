@@ -1,14 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.*?>
 
-<VBox alignment="CENTER" spacing="20" style="-fx-background-color: #f8f9fa;"
-      xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.vp_final.SearchController">
+<ScrollPane fitToWidth="false" fitToHeight="true"
+            hbarPolicy="AS_NEEDED" vbarPolicy="ALWAYS"
+            style="-fx-background-color: #f8f9fa;"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.example.vp_final.SearchController">
 
-    <Label text="Поиск" style="-fx-font-size: 28; -fx-font-weight: bold;"/>
+    <VBox alignment="TOP_CENTER" spacing="30" style="-fx-background-color: #f8f9fa;" minWidth="600">
 
-    <TextField promptText="Введите запрос..." prefWidth="300"/>
+        <padding>
+            <Insets top="40" right="40" bottom="100" left="40"/>
+        </padding>
 
-    <ListView fx:id="resultsList" prefHeight="300" prefWidth="350"/>
+    <Label text="Поиск" style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+    <TextField fx:id="searchField" promptText="Исполнители, треки, альбомы..." prefWidth="340" prefHeight="45"
+               style="-fx-background-radius: 25; -fx-padding: 0 20 0 20; -fx-font-size: 15;"/>
+
+        <!-- ЖАНРЫ (гарантированно видно и красиво)-->
+            <VBox spacing="16" VBox.vgrow="ALWAYS">
+                <Label text="Жанры"
+                       style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+                <ScrollPane hbarPolicy="ALWAYS"
+                            vbarPolicy="NEVER"
+                            fitToHeight="true"
+                            style="-fx-background: transparent; -fx-background-color: transparent;"
+                            VBox.vgrow="ALWAYS">
+
+                    <HBox fx:id="genresContainer"
+                          spacing="20"
+                          alignment="CENTER_LEFT"
+                          minHeight="220">   <!-- ЭТО ГЛАВНОЕ! -->
+
+                    <padding>
+                        <Insets top="20" right="30" bottom="20" left="20"/>
+                    </padding>
+                </HBox>
+                </ScrollPane>
+            </VBox>
+
+    <!-- ТРЕКИ ПО ЖАНРУ -->
+    <VBox spacing="12" visible="false" managed="false" fx:id="tracksSection">
+        <Label fx:id="genreTitleLabel" text="Треки жанра: Поп"
+               style="-fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+        <Separator/>
+
+        <ScrollPane vbarPolicy="ALWAYS" hbarPolicy="AS_NEEDED" fitToWidth="true" prefHeight="350" maxHeight="400">
+            <VBox fx:id="tracksContainer" spacing="12" style="-fx-padding: 15;"/>
+        </ScrollPane>
+    </VBox>
+
 </VBox>
+        </ScrollPane>

@@ -40,6 +40,15 @@ public class DatabaseHelper {
                 );
                 """,
 
+                // добавление жанров в поиске
+                """
+                CREATE TABLE IF NOT EXISTS Genre (
+                    GenreID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL UNIQUE,
+                    Description TEXT
+                );
+                """,
+
                 // Треки
                 """
                 CREATE TABLE IF NOT EXISTS Track (
@@ -48,6 +57,7 @@ public class DatabaseHelper {
                     ArtistID INTEGER,
                     AlbumID INTEGER,
                     Duration INTEGER,
+                    GenreID INTEGER,
                     TrackURL TEXT,
                     FOREIGN KEY (ArtistID) REFERENCES Artist(ArtistID) ON DELETE SET NULL,
                     FOREIGN KEY (AlbumID) REFERENCES Album(AlbumID) ON DELETE SET NULL
