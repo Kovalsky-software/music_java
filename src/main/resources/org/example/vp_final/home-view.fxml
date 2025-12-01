@@ -32,11 +32,7 @@
         <VBox spacing="12">
             <Label text="Новое" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
             <Separator/>
-            <FlowPane hgap="15" vgap="15">
-                <Label text="Контент 1" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 25; -fx-background-radius: 12;"/>
-                <Label text="Контент 2" style="-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-padding: 25; -fx-background-radius: 12;"/>
-                <Label text="Контент 3" style="-fx-background-color: #1abc9c; -fx-text-fill: white; -fx-padding: 25; -fx-background-radius: 12;"/>
-            </FlowPane>
+            <FlowPane fx:id="newTracksContainer" hgap="15" vgap="15" prefWrapLength="560"/>
         </VBox>
 
         <!-- Любимое -->

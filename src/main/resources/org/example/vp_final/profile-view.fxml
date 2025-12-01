@@ -4,6 +4,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.control.Hyperlink?>
 
 <ScrollPane fitToWidth="true"
             style="-fx-background-color: #f8f9fa;"
@@ -98,14 +99,63 @@
             <Label text="Настройки" style="-fx-font-size: 22; -fx-font-weight: bold;"/>
             <Separator prefWidth="300"/>
             <VBox spacing="8">
+
                 <Button text="Тема приложения"
                         style="-fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-font-size: 16; -fx-pref-width: 350;"/>
+
                 <Button text="Уведомления"
                         style="-fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-font-size: 16; -fx-pref-width: 350;"/>
+
                 <Button text="Конфиденциальность"
                         style="-fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-font-size: 16; -fx-pref-width: 350;"/>
-                <Button text="О приложении"
-                        style="-fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-font-size: 16; -fx-pref-width: 350;"/>
+
+                <!-- Раскрывающийся блок "О приложении" -->
+                <VBox>
+                    <!-- Заголовок-аккордеон -->
+                    <VBox style="-fx-cursor: hand; -fx-background-color: #ecf0f1; -fx-background-radius: 10; -fx-padding: 14;"
+                          onMouseClicked="#toggleAboutDetails">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <Label text="О приложении" style="-fx-font-size: 16;"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label fx:id="aboutArrow" text="Down Arrow" style="-fx-font-size: 16;"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Содержимое (скрыто по умолчанию) -->
+                    <VBox fx:id="aboutDetails" visible="false" managed="false" spacing="12"
+                          style="-fx-background-color: #ffffff; -fx-background-radius: 10; -fx-padding: 18;
+                     -fx-border-color: #ddd; -fx-border-radius: 10; -fx-border-width: 1;">
+                        <Label text="Музыкальное приложение" style="-fx-font-size: 17; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+                        <Label text="Версия 1.0 • 2025" style="-fx-text-fill: #7f8c8d;"/>
+
+                        <Separator prefWidth="300"/>
+
+                        <VBox spacing="8">
+                            <HBox spacing="12">
+                                <Label text="Разработчик:" style="-fx-font-weight: bold; -fx-min-width: 100;"/>
+                                <Label text="Иван Иванов"/>
+                            </HBox>
+                            <HBox spacing="12">
+                                <Label text="Компания:" style="-fx-font-weight: bold; -fx-min-width: 100;"/>
+                                <Label text="Student Project"/>
+                            </HBox>
+                            <HBox spacing="12">
+                                <Label text="Дата выпуска:" style="-fx-font-weight: bold; -fx-min-width: 100;"/>
+                                <Label text="01 декабря 2025"/>
+                            </HBox>
+                            <HBox spacing="12">
+                                <Label text="Репозиторий:" style="-fx-font-weight: bold; -fx-min-width: 100;"/>
+                                <Hyperlink text="github.com/username/vp_final" onAction="#openGitHubLink"/>
+                            </HBox>
+                        </VBox>
+
+                        <Separator prefWidth="300"/>
+
+                        <Label text="Приложение создано в учебных целях. Все права на музыку принадлежат правообладателям."
+                               wrapText="true" style="-fx-text-fill: #95a5a6; -fx-font-size: 13;"/>
+                    </VBox>
+                </VBox>
+
             </VBox>
         </VBox>
 

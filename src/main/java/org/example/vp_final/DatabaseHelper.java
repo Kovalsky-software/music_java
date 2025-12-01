@@ -143,6 +143,24 @@ public class DatabaseHelper {
         }
     }
 
+    private static void tryPreparedStatement(Connection conn, String sql, String value) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, value);
+            ps.executeUpdate();
+        }
+    }
+
+    private static int getArtistId(Connection conn, String name) throws SQLException {
+        String sql = "SELECT ArtistID FROM Artist WHERE Name = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        }
+        return -1;
+    }
+
     private static void insertDefaultPlans() {
         String sql = "INSERT OR IGNORE INTO SubscriptionPlan (Name, Price, Description) VALUES (?, ?, ?)";
 
