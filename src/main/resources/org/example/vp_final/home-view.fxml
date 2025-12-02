@@ -8,6 +8,7 @@
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="org.example.vp_final.HomeController">
 
+
     <VBox spacing="30" style="-fx-background-color: #f8f9fa;">
 
         <padding>
@@ -37,9 +38,18 @@
 
         <!-- Любимое -->
         <VBox spacing="12">
-            <Label text="Любимое" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-            <Separator/>
-            <Label text="Тут будет твой плейлист ❤️" style="-fx-font-size: 18; -fx-text-fill: #7f8c8d;"/>
+            <Label text="Любимое"
+                   style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator prefWidth="500"/>
+
+            <!-- ВОТ ЭТОТ FlowPane ОБЯЗАТЕЛЬНО должен быть с fx:id="favoriteTracksContainer" -->
+            <FlowPane fx:id="favoriteTracksContainer"
+                      hgap="20"
+                      vgap="20"
+                      prefWrapLength="600"
+                      alignment="CENTER_LEFT">
+                <!-- Сюда будут добавляться карточки или заглушка -->
+            </FlowPane>
         </VBox>
 
         <!-- Афиша -->

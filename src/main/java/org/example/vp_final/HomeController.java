@@ -7,6 +7,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import java.net.URL;
+import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -16,6 +17,7 @@ import java.util.ResourceBundle;
 public class HomeController implements Initializable {
 
     @FXML private FlowPane newTracksContainer;  // Это FlowPane из home-view.fxml в разделе "Новое"
+    @FXML private FlowPane favoriteTracksContainer;
 
     private User currentUser;
     private MainController mainController;
@@ -23,14 +25,21 @@ public class HomeController implements Initializable {
     public void setMainController(MainController mainController) {
         this.mainController = mainController;
     }
-
     public void setUser(User user) {
         this.currentUser = user;
+        loadFavoriteTracks();
     }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         loadLatestTracks();
+    }
+
+    private void showPlaceholder(String text) {
+        Label placeholder = new Label(text);
+        placeholder.setStyle("-fx-font-size: 18; -fx-text-fill: #95a5a6; -fx-padding: 40 0 0 0;");
+        placeholder.setWrapText(true);
+        favoriteTracksContainer.getChildren().add(placeholder);
     }
 
     private void loadLatestTracks() {
@@ -61,6 +70,53 @@ public class HomeController implements Initializable {
         } catch (Exception e) {
             e.printStackTrace();
             newTracksContainer.getChildren().add(new Label("Ошибка загрузки треков"));
+        }
+    }
+
+    private void loadFavoriteTracks() {
+        favoriteTracksContainer.getChildren().clear();
+
+        if (currentUser == null) {
+            showPlaceholder("Войдите в аккаунт");
+            return;
+        }
+
+        String sql = """
+        SELECT t.TrackID, t.Title, a.Name AS ArtistName, t.Duration
+        FROM Track t
+        JOIN Artist a ON t.ArtistID = a.ArtistID
+        JOIN UserLike ul ON t.TrackID = ul.TrackID
+        WHERE ul.UserID = ?
+        ORDER BY t.Title   -- сортируем просто по названию трека (или можно по TrackID)
+        """;
+
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, currentUser.userId());
+            ResultSet rs = pstmt.executeQuery();
+
+            boolean hasTracks = false;
+
+            while (rs.next()) {
+                hasTracks = true;
+
+                int trackId = rs.getInt("TrackID");
+                String title = rs.getString("Title");
+                String artist = rs.getString("ArtistName");
+                if (artist == null) artist = "Неизвестный исполнитель";
+
+                VBox card = createTrackCard(trackId, title, artist);
+                favoriteTracksContainer.getChildren().add(card);
+            }
+
+            if (!hasTracks) {
+                showPlaceholder("Тут будут твои любимые треки, " + currentUser.username() + " [Heart]");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showPlaceholder("Ошибка загрузки любимых треков");
         }
     }
 

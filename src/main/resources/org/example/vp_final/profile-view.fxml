@@ -38,27 +38,24 @@
                        -fx-pref-width: 250; -fx-pref-height: 50;
                        -fx-background-radius: 12;"/>
 
-        <!-- === НРАВИТСЯ === -->
-        <VBox spacing="12">
-            <Label text="Нравится" style="-fx-font-size: 22; -fx-font-weight: bold;"/>
-            <Separator prefWidth="300"/>
-            <FlowPane hgap="15" vgap="15" alignment="CENTER">
-                <VBox alignment="CENTER" spacing="8"
-                      style="-fx-background-color: #3498db; -fx-padding: 18; -fx-background-radius: 12;">
-                    <Label text="Трек 1" style="-fx-text-fill: white; -fx-font-weight: bold;"/>
-                    <Label text="Артист А" style="-fx-text-fill: #bdc3c7;"/>
-                </VBox>
-                <VBox alignment="CENTER" spacing="8"
-                      style="-fx-background-color: #9b59b6; -fx-padding: 18; -fx-background-radius: 12;">
-                    <Label text="Трек 2" style="-fx-text-fill: white; -fx-font-weight: bold;"/>
-                    <Label text="Группа XYZ" style="-fx-text-fill: #bdc3c7;"/>
-                </VBox>
-                <VBox alignment="CENTER" spacing="8"
-                      style="-fx-background-color: #1abc9c; -fx-padding: 18; -fx-background-radius: 12;">
-                    <Label text="Трек 3" style="-fx-text-fill: white; -fx-font-weight: bold;"/>
-                    <Label text="Солист" style="-fx-text-fill: #bdc3c7;"/>
-                </VBox>
-            </FlowPane>
+        <!-- НРАВИТСЯ -->
+        <VBox spacing="16">
+            <Label text="Нравится"
+                   style="-fx-font-size: 26; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator prefWidth="500"/>
+
+            <!-- Контейнер для любимых треков в профиле -->
+            <ScrollPane vbarPolicy="AS_NEEDED"
+                        hbarPolicy="NEVER"
+                        fitToWidth="true"
+                        prefHeight="420"
+                        style="-fx-background: transparent;">
+                <FlowPane fx:id="likedTracksContainer"
+                          hgap="18"
+                          vgap="18"
+                          prefWrapLength="580"
+                          alignment="CENTER_LEFT"/>
+            </ScrollPane>
         </VBox>
 
         <VBox spacing="12">
