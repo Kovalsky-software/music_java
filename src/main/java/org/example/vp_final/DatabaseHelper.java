@@ -26,6 +26,7 @@ public class DatabaseHelper {
                 CREATE TABLE IF NOT EXISTS Artist (
                     ArtistID INTEGER PRIMARY KEY AUTOINCREMENT,
                     Name TEXT NOT NULL
+                    Genre Text NOT NULL
                 );
                 """,
 
@@ -47,6 +48,7 @@ public class DatabaseHelper {
                     Title TEXT NOT NULL,
                     Date TEXT NOT NULL,
                     Location TEXT,
+                    ArtistGenre TEXT
                     Description TEXT
                 );
                 """,

@@ -24,11 +24,25 @@
 
         <!-- ЖАНРЫ — 35-40% высоты -->
         <VBox spacing="16" VBox.vgrow="ALWAYS">
-            <Label text="Исполнители по жанрам" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Label text="Треки по жанрам" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
             <ScrollPane hbarPolicy="ALWAYS" vbarPolicy="NEVER" fitToHeight="true" minHeight="240">
                 <HBox fx:id="genresContainer" spacing="22" alignment="CENTER_LEFT" minHeight="240">
                     <padding><Insets top="20" right="40" bottom="20" left="20"/></padding>
                 </HBox>
+            </ScrollPane>
+        </VBox>
+
+        <!-- ИСПОЛНИТЕЛИ ПО ЖАНРУ -->
+        <VBox spacing="16" visible="false" managed="false" fx:id="artistsSection">
+            <Label text="Исполнители этого жанра"
+                   style="-fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator/>
+
+            <ScrollPane vbarPolicy="NEVER" hbarPolicy="AS_NEEDED" fitToWidth="true">
+                <FlowPane fx:id="artistsContainer"
+                          hgap="18" vgap="18"
+                          prefWrapLength="600"
+                          alignment="CENTER_LEFT"/>
             </ScrollPane>
         </VBox>
 

@@ -18,6 +18,8 @@ public class SearchController implements Initializable {
     @FXML private VBox tracksSection;
     @FXML private Label genreTitleLabel;
     @FXML private VBox tracksContainer;
+    @FXML private VBox artistsSection;
+    @FXML private FlowPane artistsContainer;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -92,65 +94,90 @@ public class SearchController implements Initializable {
     private void showTracksByGenre(int genreId, String genreName) {
         genreTitleLabel.setText("Треки жанра: " + genreName);
         tracksContainer.getChildren().clear();
+        artistsContainer.getChildren().clear();
 
-        String sql = """
-        SELECT t.Title, a.Name AS ArtistName, t.Duration
+        // Показываем оба раздела
+        tracksSection.setVisible(true);
+        tracksSection.setManaged(true);
+        artistsSection.setVisible(true);
+        artistsSection.setManaged(true);
+
+        // === Загрузка треков ===
+        String trackSql = """
+        SELECT t.Title, a.Name AS ArtistName
         FROM Track t
         LEFT JOIN Artist a ON t.ArtistID = a.ArtistID
         WHERE t.GenreID = ?
         ORDER BY t.Title
         """;
 
-        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        // === Загрузка исполнителей по жанру (через колонку ArtistGenre) ===
+        String artistSql = """
+        SELECT ArtistID, Name
+        FROM Artist
+        WHERE ArtistGenre = (SELECT Name FROM Genre WHERE GenreID = ?)
+        ORDER BY Name
+        """;
 
-            pstmt.setInt(1, genreId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    String title = rs.getString("Title");
-                    String artist = rs.getString("ArtistName");
-                    if (artist == null) artist = "Неизвестный исполнитель";
-                    int duration = rs.getInt("Duration");
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db")) {
 
-                    HBox trackRow = new HBox(15);
-                    trackRow.setPadding(new Insets(12));
-                    trackRow.setStyle("-fx-background-color: white; -fx-background-radius: 10;");
-                    trackRow.setAlignment(Pos.CENTER_LEFT);
+            // Треки
+            try (PreparedStatement ps = conn.prepareStatement(trackSql)) {
+                ps.setInt(1, genreId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        String title = rs.getString("Title");
+                        String artist = rs.getString("ArtistName");
+                        if (artist == null) artist = "Неизвестный";
 
-                    // ← ВОТ ТАК ДОЛЖНО БЫТЬ:
-                    Label titleLabel = new Label(title);           // строка
-                    titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 15;");
+                        HBox row = new HBox(15);
+                        row.setPadding(new Insets(12));
+                        row.setStyle("-fx-background-color: white; -fx-background-radius: 10;");
+                        row.setAlignment(Pos.CENTER_LEFT);
 
-                    Label artistLabel = new Label(artist);         // строка
-                    artistLabel.setStyle("-fx-text-fill: #7f8c8d;");
+                        row.getChildren().addAll(
+                                new Label(title),
+                                new Region() {{ HBox.setHgrow(this, Priority.ALWAYS); }},
+                                new Label(artist)
+                        );
 
-                    Label durationLabel = new Label(formatDuration(duration)); // строка
-                    durationLabel.setStyle("-fx-text-fill: #95a5a6;");
-
-                    trackRow.getChildren().addAll(
-                            titleLabel,
-                            new Region() {
-                                { HBox.setHgrow(this, Priority.ALWAYS); }
-                            },
-                            artistLabel,
-                            durationLabel
-                    );
-
-                    tracksContainer.getChildren().add(trackRow);
+                        tracksContainer.getChildren().add(row);
+                    }
                 }
+            }
 
-                if (tracksContainer.getChildren().isEmpty()) {
-                    tracksContainer.getChildren().add(new Label("В этом жанре пока нет треков"));
+            // Исполнители
+            try (PreparedStatement ps = conn.prepareStatement(artistSql)) {
+                ps.setInt(1, genreId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        String name = rs.getString("Name");
+
+                        VBox card = new VBox(10);
+                        card.setPadding(new Insets(20));
+                        card.setMinWidth(140);
+                        card.setStyle("-fx-background-color: #3498db; -fx-background-radius: 16; -fx-cursor: hand;");
+
+                        Label nameLabel = new Label(name);
+                        nameLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15;");
+
+                        card.getChildren().add(nameLabel);
+                        card.setOnMouseClicked(e -> System.out.println("Открыть исполнителя: " + name));
+
+                        artistsContainer.getChildren().add(card);
+                    }
+
+                    if (artistsContainer.getChildren().isEmpty()) {
+                        Label empty = new Label("Исполнителей в этом жанре пока нет");
+                        empty.setStyle("-fx-text-fill: #95a5a6; -fx-padding: 20;");
+                        artistsContainer.getChildren().add(empty);
+                    }
                 }
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            tracksContainer.getChildren().add(new Label("Ошибка загрузки треков"));
         }
-
-        tracksSection.setVisible(true);
-        //tracksSection.setManaged(true);
     }
 
     private String formatDuration(int seconds) {
