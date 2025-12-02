@@ -52,20 +52,32 @@
             </FlowPane>
         </VBox>
 
-        <!-- Афиша -->
+        <!-- ПЛЕЙЛИСТЫ, СОЗДАННЫЕ ВАМИ -->
         <VBox spacing="12">
-            <Label text="Афиша" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-            <Separator/>
-            <TilePane hgap="15" vgap="15">
-                <VBox alignment="CENTER" style="-fx-background-color: #ecf0f1; -fx-padding: 20; -fx-background-radius: 15;">
-                    <Label text="27 декабря" style="-fx-font-weight: bold;"/>
-                    <Label text="Концерт в Москве"/>
-                </VBox>
-                <VBox alignment="CENTER" style="-fx-background-color: #ecf0f1; -fx-padding: 20; -fx-background-radius: 15;">
-                    <Label text="31 декабря" style="-fx-font-weight: bold;"/>
-                    <Label text="Новогодняя вечеринка"/>
-                </VBox>
-            </TilePane>
+            <Label text="Плейлисты, созданные вами"
+                   style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator prefWidth="500"/>
+
+            <ScrollPane vbarPolicy="NEVER" hbarPolicy="AS_NEEDED" fitToWidth="true">
+                <FlowPane fx:id="userPlaylistsContainer"
+                          hgap="18" vgap="18"
+                          prefWrapLength="600"
+                          alignment="CENTER_LEFT"/>
+            </ScrollPane>
+        </VBox>
+
+        <!-- АФИША -->
+        <VBox spacing="12">
+            <Label text="Афиша"
+                   style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator prefWidth="500"/>
+
+            <ScrollPane vbarPolicy="NEVER" hbarPolicy="AS_NEEDED" fitToWidth="true">
+                <FlowPane fx:id="afishaContainer"
+                          hgap="18" vgap="18"
+                          prefWrapLength="600"
+                          alignment="CENTER_LEFT"/>
+            </ScrollPane>
         </VBox>
 
         <Region prefHeight="100"/> <!-- Отступ снизу -->

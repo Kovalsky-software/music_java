@@ -23,6 +23,7 @@ public class ProfileController {
 
     // === НОВОЕ: контейнер для треков "Нравится" ===
     @FXML private FlowPane likedTracksContainer;
+    @FXML private FlowPane favoriteAuthorsContainer;
 
     private User currentUser;
     private boolean aboutExpanded = false;
@@ -33,7 +34,7 @@ public class ProfileController {
         this.currentUser = user;
         usernameLabel.setText(user.username());
         idLabel.setText("ID: " + user.userId());
-
+        loadFavoriteAuthors();
         loadLikedTracks();  // ← Загружаем "Нравится" сразу при входе в профиль
     }
 
@@ -44,7 +45,7 @@ public class ProfileController {
     @FXML
     private void toggleAboutDetails() {
         aboutExpanded = !aboutExpanded;
-        aboutArrow.setText(aboutExpanded ? "Up Arrow" : "Down Arrow");
+        aboutArrow.setText(aboutExpanded ? "Скрыть" : "Показать");
         aboutDetails.setVisible(aboutExpanded);
         aboutDetails.setManaged(aboutExpanded);
     }
@@ -71,6 +72,40 @@ public class ProfileController {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void loadFavoriteAuthors() {
+        if (currentUser == null) return;
+        favoriteAuthorsContainer.getChildren().clear();
+
+        String sql = """
+        SELECT a.ArtistID, a.Name 
+        FROM Artist a
+        JOIN UserLikeAuthor ula ON a.ArtistID = ula.ArtistID
+        WHERE ula.UserID = ?
+        """;
+
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:music_app.db");
+             PreparedStatement p = c.prepareStatement(sql)) {
+            p.setInt(1, currentUser.userId());
+            ResultSet rs = p.executeQuery();
+
+            while (rs.next()) {
+                VBox author = new VBox(12);
+                author.setPadding(new Insets(20));
+                author.setStyle("-fx-background-color: #e74c3c; -fx-background-radius: 50%; -fx-pref-width: 100; -fx-pref-height: 100; -fx-alignment: center;");
+                Label name = new Label(rs.getString("Name"));
+                name.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+                author.getChildren().add(name);
+                favoriteAuthorsContainer.getChildren().add(author);
+            }
+
+            if (favoriteAuthorsContainer.getChildren().isEmpty()) {
+                Label empty = new Label("Тут будут ваши любимые исполнители");
+                empty.setStyle("-fx-text-fill: #95a5a6; -fx-font-size: 16;");
+                favoriteAuthorsContainer.getChildren().add(empty);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     // ===================== НОВАЯ ЧАСТЬ: "Нравится" =====================
@@ -109,7 +144,7 @@ public class ProfileController {
             }
 
             if (!hasTracks) {
-                Label empty = new Label("Тут будут треки, которые тебе нравятся, " + currentUser.username() + " (Musical note)");
+                Label empty = new Label("Тут будут треки, которые тебе нравятся, " + currentUser.username());
                 empty.setStyle("-fx-font-size: 18; -fx-text-fill: #95a5a6; -fx-padding: 50;");
                 empty.setWrapText(true);
                 likedTracksContainer.getChildren().add(empty);

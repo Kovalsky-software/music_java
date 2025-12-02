@@ -58,23 +58,18 @@
             </ScrollPane>
         </VBox>
 
+        <!-- === Любимые авторы === -->
         <VBox spacing="12">
             <Label text="Любимые авторы" style="-fx-font-size: 22; -fx-font-weight: bold;"/>
             <Separator prefWidth="300"/>
-            <TilePane hgap="25" vgap="20" alignment="CENTER">
-                <VBox alignment="CENTER" spacing="10">
-                    <Circle radius="45" fill="#e74c3c"/>
-                    <Label text="Артист А"/>
-                </VBox>
-                <VBox alignment="CENTER" spacing="10">
-                    <Circle radius="45" fill="#3498db"/>
-                    <Label text="Группа Б"/>
-                </VBox>
-                <VBox alignment="CENTER" spacing="10">
-                    <Circle radius="45" fill="#9b59b6"/>
-                    <Label text="Дуэт"/>
-                </VBox>
-            </TilePane>
+
+            <!-- ВОТ СЮДА ВСТАВЛЯЕМ FlowPane -->
+            <ScrollPane hbarPolicy="AS_NEEDED" vbarPolicy="NEVER" fitToWidth="true">
+                <FlowPane fx:id="favoriteAuthorsContainer"
+                          hgap="20" vgap="20"
+                          prefWrapLength="600"
+                          alignment="CENTER"/>
+            </ScrollPane>
         </VBox>
 
         <!-- === ПЛЕЙЛИСТЫ === -->

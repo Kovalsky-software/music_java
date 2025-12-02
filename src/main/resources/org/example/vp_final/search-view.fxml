@@ -24,7 +24,7 @@
 
         <!-- ЖАНРЫ — 35-40% высоты -->
         <VBox spacing="16" VBox.vgrow="ALWAYS">
-            <Label text="Жанры" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Label text="Исполнители по жанрам" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
             <ScrollPane hbarPolicy="ALWAYS" vbarPolicy="NEVER" fitToHeight="true" minHeight="240">
                 <HBox fx:id="genresContainer" spacing="22" alignment="CENTER_LEFT" minHeight="240">
                     <padding><Insets top="20" right="40" bottom="20" left="20"/></padding>

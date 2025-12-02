@@ -18,6 +18,8 @@ public class HomeController implements Initializable {
 
     @FXML private FlowPane newTracksContainer;  // Это FlowPane из home-view.fxml в разделе "Новое"
     @FXML private FlowPane favoriteTracksContainer;
+    @FXML private FlowPane userPlaylistsContainer;
+    @FXML private FlowPane afishaContainer;
 
     private User currentUser;
     private MainController mainController;
@@ -28,6 +30,10 @@ public class HomeController implements Initializable {
     public void setUser(User user) {
         this.currentUser = user;
         loadFavoriteTracks();
+        this.currentUser = user;
+        loadFavoriteTracks();
+        loadUserPlaylists();
+        loadAfisha();
     }
 
     @Override
@@ -73,6 +79,86 @@ public class HomeController implements Initializable {
         }
     }
 
+//
+
+    private void loadUserPlaylists() {
+        if (currentUser == null || userPlaylistsContainer == null) {
+            System.out.println("loadUserPlaylists: пользователь или контейнер = null");
+            return;
+        }
+
+        userPlaylistsContainer.getChildren().clear();
+        System.out.println("Загружаем плейлисты для UserID = " + currentUser.userId());
+
+        String sql = "SELECT Title FROM Playlist WHERE UserID = ? ORDER BY CreationDate DESC";
+
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, currentUser.userId());
+            ResultSet rs = pstmt.executeQuery();
+
+            boolean hasPlaylists = false;
+
+            while (rs.next()) {
+                hasPlaylists = true;
+                String title = rs.getString("Title");
+                System.out.println("Найден плейлист: " + title);
+
+                VBox playlistCard = new VBox(12);
+                playlistCard.setPadding(new Insets(20));
+                playlistCard.setMinWidth(160);
+                playlistCard.setStyle("-fx-background-color: #9b59b6; -fx-background-radius: 16; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0.2, 0, 4); -fx-cursor: hand;");
+
+                Label titleLabel = new Label(title);
+                titleLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16;");
+                playlistCard.getChildren().add(titleLabel);
+
+                userPlaylistsContainer.getChildren().add(playlistCard);
+            }
+
+            if (!hasPlaylists) {
+                System.out.println("Плейлистов нет → показываем заглушку");
+                Label empty = new Label("Вы ещё не создали ни одного плейлиста");
+                empty.setStyle("-fx-text-fill: #95a5a6; -fx-font-size: 17; -fx-padding: 30 0;");
+                empty.setWrapText(true);
+                userPlaylistsContainer.getChildren().add(empty);
+            }
+
+        } catch (SQLException e) {
+            System.out.println("ОШИБКА SQL при загрузке плейлистов:");
+            e.printStackTrace();
+
+            Label error = new Label("Ошибка загрузки плейлистов");
+            error.setStyle("-fx-text-fill: #e74c3c;");
+            userPlaylistsContainer.getChildren().add(error);
+        }
+    }
+    private void loadAfisha() {
+        afishaContainer.getChildren().clear();
+        String sql = "SELECT Title, Date, Location FROM Afisha ORDER BY Date";
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:music_app.db");
+             PreparedStatement p = c.prepareStatement(sql);
+             ResultSet rs = p.executeQuery()) {
+
+            while (rs.next()) {
+                VBox event = new VBox(8);
+                event.setPadding(new Insets(16));
+                event.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 16; -fx-min-width: 200;");
+
+                Label title = new Label(rs.getString("Title"));
+                title.setStyle("-fx-font-weight: bold; -fx-font-size: 15;");
+                Label date = new Label(rs.getString("Date"));
+                date.setStyle("-fx-text-fill: #e74c3c;");
+                Label loc = new Label(rs.getString("Location"));
+                loc.setStyle("-fx-text-fill: #7f8c8d;");
+
+                event.getChildren().addAll(title, date, loc);
+                afishaContainer.getChildren().add(event);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
     private void loadFavoriteTracks() {
         favoriteTracksContainer.getChildren().clear();
 
@@ -111,7 +197,7 @@ public class HomeController implements Initializable {
             }
 
             if (!hasTracks) {
-                showPlaceholder("Тут будут твои любимые треки, " + currentUser.username() + " [Heart]");
+                showPlaceholder("Тут будут твои любимые треки, " + currentUser.username());
             }
 
         } catch (SQLException e) {

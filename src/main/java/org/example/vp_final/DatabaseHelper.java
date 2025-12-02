@@ -29,6 +29,39 @@ public class DatabaseHelper {
                 );
                 """,
 
+                // === ПЛЕЙЛИСТЫ ===
+                """
+                CREATE TABLE IF NOT EXISTS Playlist (
+                    PlaylistID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    UserID INTEGER NOT NULL,
+                    Title TEXT NOT NULL,
+                    CreatedAt TEXT DEFAULT (datetime('now')),
+                    FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE
+                );
+                """,
+
+                // === АФИША ===
+                                """
+                CREATE TABLE IF NOT EXISTS Afisha (
+                    AfishaID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Title TEXT NOT NULL,
+                    Date TEXT NOT NULL,
+                    Location TEXT,
+                    Description TEXT
+                );
+                """,
+
+                // === ЛЮБИМЫЕ АВТОРЫ ===
+                                """
+                CREATE TABLE IF NOT EXISTS UserLikeAuthor (
+                    UserID INTEGER,
+                    ArtistID INTEGER,
+                    PRIMARY KEY (UserID, ArtistID),
+                    FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE,
+                    FOREIGN KEY (ArtistID) REFERENCES Artist(ArtistID) ON DELETE CASCADE
+                );
+                """,
+
                 // Альбомы
                 """
                 CREATE TABLE IF NOT EXISTS Album (
@@ -143,8 +176,7 @@ public class DatabaseHelper {
                 stmt.execute(sql);
             }
 
-            // Вставляем базовые планы подписки, если их ещё нет
-            insertDefaultPlans();
+
 
             System.out.println("База данных инициализирована успешно.");
         } catch (SQLException e) {
@@ -170,39 +202,6 @@ public class DatabaseHelper {
         }
         return -1;
     }
-
-    private static void insertDefaultPlans() {
-        String sql = "INSERT OR IGNORE INTO SubscriptionPlan (Name, Price, Description) VALUES (?, ?, ?)";
-
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // Free
-            pstmt.setString(1, "Free");
-            pstmt.setDouble(2, 0.0);
-            pstmt.setString(3, "Бесплатный план с рекламой");
-            pstmt.addBatch();
-
-            // Premium
-            pstmt.setString(1, "Premium");
-            pstmt.setDouble(2, 9.99);
-            pstmt.setString(3, "Без рекламы, офлайн, лучшее качество");
-            pstmt.addBatch();
-
-            // Family
-            pstmt.setString(1, "Family");
-            pstmt.setDouble(2, 14.99);
-            pstmt.setString(3, "До 6 аккаунтов, семейный доступ");
-            pstmt.addBatch();
-
-            pstmt.executeBatch();
-
-        } catch (SQLException e) {
-            System.err.println("Не удалось вставить планы подписки: " + e.getMessage());
-        }
-    }
-
-    // ===================== АВТОРИЗАЦИЯ =====================
 
     private static String generateSalt() {
         SecureRandom random = new SecureRandom();
