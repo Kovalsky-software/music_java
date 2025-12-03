@@ -125,15 +125,15 @@
                         <VBox spacing="8">
                             <HBox spacing="12">
                                 <Label text="Разработчик:" style="-fx-font-weight: bold; -fx-min-width: 100;"/>
-                                <Label text="Иван Иванов"/>
+                                <Label text="Bink"/>
                             </HBox>
                             <HBox spacing="12">
                                 <Label text="Компания:" style="-fx-font-weight: bold; -fx-min-width: 100;"/>
-                                <Label text="Student Project"/>
+                                <Label text="ФМ-12-22"/>
                             </HBox>
                             <HBox spacing="12">
                                 <Label text="Дата выпуска:" style="-fx-font-weight: bold; -fx-min-width: 100;"/>
-                                <Label text="01 декабря 2025"/>
+                                <Label text="ноябрь - декабрь 2025"/>
                             </HBox>
                             <HBox spacing="12">
                                 <Label text="Репозиторий:" style="-fx-font-weight: bold; -fx-min-width: 100;"/>
@@ -143,15 +143,13 @@
 
                         <Separator prefWidth="300"/>
 
-                        <Label text="Приложение создано в учебных целях. Все права на музыку принадлежат правообладателям."
+                        <Label text="Учебное приложение для предмета JavaFX"
                                wrapText="true" style="-fx-text-fill: #95a5a6; -fx-font-size: 13;"/>
                     </VBox>
                 </VBox>
 
             </VBox>
         </VBox>
-
-        <!-- Нижний отступ, чтобы контент не перекрывался нижним меню -->
         <Region prefHeight="120"/>
 
     </VBox>

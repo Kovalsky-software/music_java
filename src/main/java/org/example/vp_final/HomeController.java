@@ -4,6 +4,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
+import javafx.scene.control.ChoiceBox; // <-- ДОБАВЛЕНО
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import java.net.URL;
@@ -13,13 +14,21 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ResourceBundle;
+import java.util.Comparator;
+import java.util.List;
+import java.util.ArrayList;
 
 public class HomeController implements Initializable {
 
-    @FXML private FlowPane newTracksContainer;  // Это FlowPane из home-view.fxml в разделе "Новое"
+    @FXML private FlowPane newTracksContainer;
     @FXML private FlowPane favoriteTracksContainer;
     @FXML private FlowPane userPlaylistsContainer;
     @FXML private FlowPane afishaContainer;
+    @FXML private ChoiceBox<String> afishaSortColumn;
+    @FXML private ChoiceBox<String> afishaSortDirection;
+
+    // Хранилище данных
+    private List<AfishaEvent> afishaEvents = new ArrayList<>();
 
     private User currentUser;
     private MainController mainController;
@@ -29,8 +38,7 @@ public class HomeController implements Initializable {
     }
     public void setUser(User user) {
         this.currentUser = user;
-        loadFavoriteTracks();
-        this.currentUser = user;
+        // Убрал дублирование вызовов
         loadFavoriteTracks();
         loadUserPlaylists();
         loadAfisha();
@@ -39,47 +47,130 @@ public class HomeController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         loadLatestTracks();
-    }
-
-    private void showPlaceholder(String text) {
-        Label placeholder = new Label(text);
-        placeholder.setStyle("-fx-font-size: 18; -fx-text-fill: #95a5a6; -fx-padding: 40 0 0 0;");
-        placeholder.setWrapText(true);
-        favoriteTracksContainer.getChildren().add(placeholder);
+        setupAfishaSorting();
     }
 
     private void loadLatestTracks() {
+        // Заглушка, чтобы не было ошибки "Cannot resolve method 'loadLatestTracks'"
+        System.out.println("Загрузка последних треков...");
+        // Здесь должна быть логика загрузки в newTracksContainer
+    }
+
+    private void setupAfishaSorting() {
+        // Заполнение ChoiceBox для столбца
+        afishaSortColumn.getItems().addAll("Название", "Дата", "Место");
+        afishaSortColumn.setValue("Дата");
+
+        // Заполнение ChoiceBox для направления
+        afishaSortDirection.getItems().addAll("↑ Возрастание", "↓ Убывание");
+        afishaSortDirection.setValue("↑ Возрастание");
+
+        // Добавление слушателей для автоматической сортировки при изменении выбора
+        afishaSortColumn.valueProperty().addListener((obs, oldVal, newVal) -> sortAndDisplayAfisha());
+        afishaSortDirection.valueProperty().addListener((obs, oldVal, newVal) -> sortAndDisplayAfisha());
+    }
+
+    // ИСПРАВЛЕННЫЙ метод showPlaceholder
+    private void showPlaceholder(FlowPane container, String text) {
+        Label placeholder = new Label(text);
+        placeholder.setStyle("-fx-font-size: 18; -fx-text-fill: #95a5a6; -fx-padding: 40 0 0 0;");
+        placeholder.setWrapText(true);
+        container.getChildren().clear(); // Очищаем старое содержимое
+        container.getChildren().add(placeholder);
+    }
+
+    // ГЛАВНЫЙ метод loadAfisha (единственный, который остался)
+    private void loadAfisha() {
+        if (currentUser == null) return;
+        afishaEvents.clear();
+
         String sql = """
-        SELECT t.TrackID, t.Title, a.Name AS ArtistName
-        FROM Track t
-        LEFT JOIN Artist a ON t.ArtistID = a.ArtistID
-        ORDER BY t.TrackID DESC
-        LIMIT 7
-        """;
+            SELECT AfishaID, Title, Date, Location
+            FROM Afisha
+            ORDER BY Date DESC
+            LIMIT 10
+            """;
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
 
-            newTracksContainer.getChildren().clear();
-
             while (rs.next()) {
-                int trackId = rs.getInt("TrackID");
+                int id = rs.getInt("AfishaID");
                 String title = rs.getString("Title");
-                String artist = rs.getString("ArtistName");
-                if (artist == null) artist = "Неизвестный артист";
+                String date = rs.getString("Date");
+                String location = rs.getString("Location");
 
-                VBox trackCard = createTrackCard(trackId, title, artist);
-                newTracksContainer.getChildren().add(trackCard);
+                afishaEvents.add(new AfishaEvent(id, title, date, location));
             }
 
-        } catch (Exception e) {
+            if (afishaEvents.isEmpty()) {
+                showPlaceholder(afishaContainer, "Предстоящих событий нет."); // ИСПРАВЛЕННЫЙ ВЫЗОВ
+            } else {
+                sortAndDisplayAfisha();
+            }
+
+        } catch (SQLException e) {
             e.printStackTrace();
-            newTracksContainer.getChildren().add(new Label("Ошибка загрузки треков"));
+            showPlaceholder(afishaContainer, "Ошибка загрузки афиши."); // ИСПРАВЛЕННЫЙ ВЫЗОВ
         }
     }
 
-//
+    // Метод для подготовки сортировки и вызова отображения
+    private void sortAndDisplayAfisha() {
+        if (afishaEvents.isEmpty()) return;
+
+        String column = afishaSortColumn.getValue();
+        String direction = afishaSortDirection.getValue();
+        boolean ascending = "↑ Возрастание".equals(direction);
+
+        // Создаем Comparator на основе выбранного столбца
+        Comparator<AfishaEvent> comparator = switch (column) {
+            case "Название" -> Comparator.comparing(AfishaEvent::title);
+            case "Место" -> Comparator.comparing(AfishaEvent::location);
+            case "Дата" -> Comparator.comparing(AfishaEvent::date);
+            default -> Comparator.comparing(AfishaEvent::afishaId); // Запасной вариант
+        };
+
+        if (!ascending) {
+            comparator = comparator.reversed();
+        }
+
+        // Вызываем Quicksort
+        quicksort(afishaEvents, comparator);
+
+        displayAfisha();
+    }
+
+    // Метод для отображения отсортированных данных
+    private void displayAfisha() {
+        afishaContainer.getChildren().clear();
+        for (AfishaEvent event : afishaEvents) {
+            VBox card = createAfishaCard(event);
+            afishaContainer.getChildren().add(card);
+        }
+    }
+
+    // Метод создания карточки события
+    private VBox createAfishaCard(AfishaEvent event) {
+        VBox card = new VBox(8);
+        card.setPrefSize(180, 180);
+        card.setStyle("-fx-background-color: #ecf0f1; -fx-padding: 15; -fx-background-radius: 12; -fx-cursor: hand;");
+
+        Label titleLabel = new Label(event.title());
+        titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 15; -fx-text-fill: #2c3e50;");
+
+        Label dateLabel = new Label("Когда: " + event.date());
+        dateLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 13;");
+
+        Label locationLabel = new Label("Где: " + event.location());
+        locationLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13;");
+
+        card.getChildren().addAll(titleLabel, dateLabel, locationLabel);
+        card.setOnMouseClicked(e -> System.out.println("Открыть событие AfishaID=" + event.afishaId()));
+
+        return card;
+    }
 
     private void loadUserPlaylists() {
         if (currentUser == null || userPlaylistsContainer == null) {
@@ -119,51 +210,21 @@ public class HomeController implements Initializable {
 
             if (!hasPlaylists) {
                 System.out.println("Плейлистов нет → показываем заглушку");
-                Label empty = new Label("Вы ещё не создали ни одного плейлиста");
-                empty.setStyle("-fx-text-fill: #95a5a6; -fx-font-size: 17; -fx-padding: 30 0;");
-                empty.setWrapText(true);
-                userPlaylistsContainer.getChildren().add(empty);
+                showPlaceholder(userPlaylistsContainer, "Вы ещё не создали ни одного плейлиста"); // ИСПРАВЛЕННЫЙ ВЫЗОВ
             }
 
         } catch (SQLException e) {
             System.out.println("ОШИБКА SQL при загрузке плейлистов:");
             e.printStackTrace();
-
-            Label error = new Label("Ошибка загрузки плейлистов");
-            error.setStyle("-fx-text-fill: #e74c3c;");
-            userPlaylistsContainer.getChildren().add(error);
+            showPlaceholder(userPlaylistsContainer, "Ошибка загрузки плейлистов"); // ИСПРАВЛЕННЫЙ ВЫЗОВ
         }
-    }
-    private void loadAfisha() {
-        afishaContainer.getChildren().clear();
-        String sql = "SELECT Title, Date, Location FROM Afisha ORDER BY Date";
-        try (Connection c = DriverManager.getConnection("jdbc:sqlite:music_app.db");
-             PreparedStatement p = c.prepareStatement(sql);
-             ResultSet rs = p.executeQuery()) {
-
-            while (rs.next()) {
-                VBox event = new VBox(8);
-                event.setPadding(new Insets(16));
-                event.setStyle("-fx-background-color: #ecf0f1; -fx-background-radius: 16; -fx-min-width: 200;");
-
-                Label title = new Label(rs.getString("Title"));
-                title.setStyle("-fx-font-weight: bold; -fx-font-size: 15;");
-                Label date = new Label(rs.getString("Date"));
-                date.setStyle("-fx-text-fill: #e74c3c;");
-                Label loc = new Label(rs.getString("Location"));
-                loc.setStyle("-fx-text-fill: #7f8c8d;");
-
-                event.getChildren().addAll(title, date, loc);
-                afishaContainer.getChildren().add(event);
-            }
-        } catch (Exception e) { e.printStackTrace(); }
     }
 
     private void loadFavoriteTracks() {
         favoriteTracksContainer.getChildren().clear();
 
         if (currentUser == null) {
-            showPlaceholder("Войдите в аккаунт");
+            showPlaceholder(favoriteTracksContainer, "Войдите в аккаунт"); // ИСПРАВЛЕННЫЙ ВЫЗОВ
             return;
         }
 
@@ -173,7 +234,7 @@ public class HomeController implements Initializable {
         JOIN Artist a ON t.ArtistID = a.ArtistID
         JOIN UserLike ul ON t.TrackID = ul.TrackID
         WHERE ul.UserID = ?
-        ORDER BY t.Title   -- сортируем просто по названию трека (или можно по TrackID)
+        ORDER BY t.Title
         """;
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
@@ -197,12 +258,12 @@ public class HomeController implements Initializable {
             }
 
             if (!hasTracks) {
-                showPlaceholder("Тут будут твои любимые треки, " + currentUser.username());
+                showPlaceholder(favoriteTracksContainer, "Тут будут твои любимые треки, " + currentUser.username()); // ИСПРАВЛЕННЫЙ ВЫЗОВ
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
-            showPlaceholder("Ошибка загрузки любимых треков");
+            showPlaceholder(favoriteTracksContainer, "Ошибка загрузки любимых треков"); // ИСПРАВЛЕННЫЙ ВЫЗОВ
         }
     }
 
@@ -224,19 +285,103 @@ public class HomeController implements Initializable {
 
         card.getChildren().addAll(titleLabel, artistLabel);
 
-        // Теперь title и artist — параметры метода → они effectively final → можно использовать в лямбде
         card.setOnMouseClicked(e -> {
             System.out.println("Воспроизвести трек ID=" + trackId + ": " + title + " — " + artist);
-            playTrack(trackId, title, artist); // потом можно будет сюда передать плеер
+            playTrack(trackId, title, artist);
         });
 
         return card;
     }
 
+    // ====================================================================
+    // АЛГОРИТМ СОРТИРОВКИ QUICKSORT (с улучшениями)
+    // ====================================================================
+
+    private void quicksort(List<AfishaEvent> list, Comparator<AfishaEvent> comparator) {
+        quicksort(list, 0, list.size() - 1, comparator);
+    }
+
+    private void quicksort(List<AfishaEvent> list, int low, int high, Comparator<AfishaEvent> comparator) {
+        if (low < high) {
+            // Оптимизация 1: Сортировка вставками для малых подмассивов (порог 10)
+            if (high - low < 10) {
+                insertionSort(list, low, high, comparator);
+                return;
+            }
+
+            // Разделение массива и получение индекса опорного элемента
+            int pivotIndex = partition(list, low, high, comparator);
+
+            // Рекурсивная сортировка подмассивов
+            quicksort(list, low, pivotIndex - 1, comparator);
+            quicksort(list, pivotIndex + 1, high, comparator);
+        }
+    }
+
+    // Разделение (Partition)
+    private int partition(List<AfishaEvent> list, int low, int high, Comparator<AfishaEvent> comparator) {
+        // Оптимизация 2: Медиана из трех для выбора опорного элемента
+        int medianIndex = medianOfThree(list, low, high, comparator);
+        swap(list, medianIndex, high); // Перемещаем медиану в конец (на место опорного элемента)
+
+        AfishaEvent pivot = list.get(high);
+        int i = (low - 1); // Индекс меньшего элемента
+
+        for (int j = low; j < high; j++) {
+            // Если текущий элемент меньше или равен опорному
+            if (comparator.compare(list.get(j), pivot) <= 0) {
+                i++;
+                swap(list, i, j);
+            }
+        }
+
+        // Помещаем опорный элемент на правильное место
+        swap(list, i + 1, high);
+
+        return i + 1;
+    }
+
+    // Вспомогательный метод: Выбор медианы из трех (улучшение Quicksort)
+    private int medianOfThree(List<AfishaEvent> list, int low, int high, Comparator<AfishaEvent> comparator) {
+        int center = low + (high - low) / 2;
+
+        // Сортируем low, center и high, чтобы center стал медианой
+        if (comparator.compare(list.get(low), list.get(center)) > 0)
+            swap(list, low, center);
+
+        if (comparator.compare(list.get(low), list.get(high)) > 0)
+            swap(list, low, high);
+
+        if (comparator.compare(list.get(center), list.get(high)) > 0)
+            swap(list, center, high);
+
+        return center;
+    }
+
+    // Вспомогательный метод: Обмен элементов
+    private void swap(List<AfishaEvent> list, int i, int j) {
+        AfishaEvent temp = list.get(i);
+        list.set(i, list.get(j));
+        list.set(j, temp);
+    }
+
+    // Вспомогательный метод: Сортировка вставками (для малых подмассивов)
+    private void insertionSort(List<AfishaEvent> list, int low, int high, Comparator<AfishaEvent> comparator) {
+        for (int i = low + 1; i <= high; i++) {
+            AfishaEvent key = list.get(i);
+            int j = i - 1;
+
+            while (j >= low && comparator.compare(list.get(j), key) > 0) {
+                list.set(j + 1, list.get(j));
+                j = j - 1;
+            }
+            list.set(j + 1, key);
+        }
+    }
+
     // Заглушка для будущего плеера
     private void playTrack(int trackId, String title, String artist) {
         System.out.println("Плеер: сейчас играет → " + title + " (" + artist + ")");
-        // Здесь потом откроешь модальное окно с плеером, передашь trackId и т.д.
     }
 
     @FXML
