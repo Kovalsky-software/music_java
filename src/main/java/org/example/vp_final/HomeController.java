@@ -604,15 +604,18 @@ public class HomeController implements Initializable {
         loadLatestTracks();
         setupAfishaSorting();
 
-        // Настройка переключателя "Любимое"
-        if (toggleTracks != null) toggleTracks.setSelected(true);
-        favoriteToggleGroup.selectedToggleProperty().addListener((obs, old, newToggle) -> {
-            if (newToggle == null && old != null) {
-                old.setSelected(true);
-            } else {
-                loadFavoriteSection();
-            }
+        // По умолчанию — показываем треки
+        if (toggleTracks != null) {
+            toggleTracks.setSelected(true);
+        }
+
+        // Самое главное — правильный слушатель!
+        favoriteToggleGroup.selectedToggleProperty().addListener((obs, old, selectedToggle) -> {
+            loadFavoriteSection(); // просто вызываем один метод — он сам разберётся
         });
+
+        // Загружаем контент при первом открытии экрана
+        loadFavoriteSection();
     }
 
     private void loadLatestTracks() {
@@ -737,12 +740,13 @@ public class HomeController implements Initializable {
     // === Любимое: универсальная загрузка ===
     private void loadFavoriteSection() {
         if (currentUser == null || favoriteContentContainer == null) return;
-        favoriteContentContainer.getChildren().clear();
+
+        favoriteContentContainer.getChildren().clear(); // очищаем старое
 
         if (toggleTracks.isSelected()) {
             loadFavoriteTracks();
         } else {
-            loadFavoritePlaylists();
+            loadFavoritePlaylists(); // сюда попадём, когда выбран "Плейлисты"
         }
     }
 
@@ -781,13 +785,13 @@ public class HomeController implements Initializable {
 
     private void loadFavoritePlaylists() {
         String sql = """
-            SELECT p.PlaylistID, p.Title, p.CreationDate, u.Username AS OwnerName
-            FROM Playlist p
-            JOIN UserLikePlaylist ulp ON p.PlaylistID = ulp.PlaylistID
-            JOIN User u ON p.UserID = u.UserID
-            WHERE ulp.UserID = ?
-            ORDER BY p.CreationDate DESC
-            """;
+        SELECT p.PlaylistID, p.Title, p.CreatedAt, u.Username AS OwnerName
+        FROM Playlist p
+        JOIN UserLikePlaylist ulp ON p.PlaylistID = ulp.PlaylistID
+        JOIN User u ON p.UserID = u.UserID
+        WHERE ulp.UserID = ?
+        ORDER BY p.CreatedAt DESC
+        """;
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -801,14 +805,18 @@ public class HomeController implements Initializable {
                 VBox card = createFavoritePlaylistCard(
                         rs.getString("Title"),
                         rs.getString("OwnerName"),
-                        rs.getString("CreationDate")
+                        rs.getString("CreatedAt")
                 );
                 favoriteContentContainer.getChildren().add(card);
             }
-            if (!has) showPlaceholder(favoriteContentContainer, "Нет понравившихся плейлистов");
+
+            if (!has) {
+                showPlaceholder(favoriteContentContainer, "Нет понравившихся плейлистов");
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
-            showPlaceholder(favoriteContentContainer, "Ошибка загрузки плейлистов");
+            showPlaceholder(favoriteContentContainer, "Ошибка загрузки");
         }
     }
 

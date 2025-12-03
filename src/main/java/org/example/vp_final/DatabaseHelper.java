@@ -131,6 +131,14 @@ public class DatabaseHelper {
                 );
                 """,
 
+                """
+                CREATE TABLE IF NOT EXISTS UserLikePlaylist(
+                id primariy key,
+                PlaylistID integer,
+                UserID integer
+                )
+                """,
+
                 // Платежи
                 """
                 CREATE TABLE IF NOT EXISTS Payment (
