@@ -16,29 +16,36 @@
             <Insets top="40" right="40" bottom="120" left="40"/>
         </padding>
 
-        <!-- Заголовок + поиск -->
         <Label text="Поиск" style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-        <TextField fx:id="searchField" promptText="Исполнители, треки, альбомы..."
-                   prefWidth="360" prefHeight="48"
-                   style="-fx-background-radius: 30; -fx-padding: 0 25 0 25; -fx-font-size: 15;"/>
 
-        <!-- ЖАНРЫ — 35-40% высоты -->
-        <VBox spacing="16" VBox.vgrow="ALWAYS">
-            <Label text="Треки по жанрам" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-            <ScrollPane hbarPolicy="ALWAYS" vbarPolicy="NEVER" fitToHeight="true" minHeight="240">
-                <HBox fx:id="genresContainer" spacing="22" alignment="CENTER_LEFT" minHeight="240">
-                    <padding><Insets top="20" right="40" bottom="20" left="20"/></padding>
-                </HBox>
+        <HBox alignment="CENTER" spacing="15">
+            <TextField fx:id="searchField" promptText="Исполнители, треки, альбомы..."
+                       prefWidth="300" prefHeight="48"
+                       style="-fx-background-radius: 30; -fx-padding: 0 25 0 25; -fx-font-size: 15;"/>
+
+            <ChoiceBox fx:id="searchTypeChoiceBox"
+                       prefHeight="48"
+                       style="-fx-background-radius: 30; -fx-padding: 0 15 0 15; -fx-font-size: 15;"/>
+        </HBox>
+
+        <VBox spacing="16" prefHeight="300" VBox.vgrow="NEVER">
+            <Label text="Жанры"
+                   style="-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator prefWidth="500"/>
+
+            <ScrollPane hbarPolicy="ALWAYS" vbarPolicy="NEVER" fitToHeight="true" minHeight="200">
+                <HBox fx:id="genresContainer" spacing="18" alignment="CENTER_LEFT" style="-fx-padding: 0 5 0 5;"/>
             </ScrollPane>
         </VBox>
 
-        <!-- ИСПОЛНИТЕЛИ ПО ЖАНРУ -->
+
         <VBox fx:id="artistsSection" spacing="16" visible="false" managed="false">
 
-            <Label text="Исполнители этого жанра"
+            <Label fx:id="artistsTitleLabel" text="Исполнители этого жанра"
                    style="-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
 
             <Separator prefWidth="500"/>
+
 
             <ScrollPane vbarPolicy="ALWAYS" hbarPolicy="AS_NEEDED"
                         fitToWidth="true" fitToHeight="true"
@@ -49,18 +56,16 @@
             </ScrollPane>
         </VBox>
 
-        <!-- ТРЕКИ — теперь будет ОГРОМНЫМ! -->
         <VBox fx:id="tracksSection" spacing="16" visible="false">
 
             <Label fx:id="genreTitleLabel" text="Треки жанра: Поп"
                    style="-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
             <Separator prefWidth="500"/>
 
-            <!-- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: ScrollPane с VBox.vgrow="ALWAYS" и fitToHeight="true" -->
             <ScrollPane vbarPolicy="ALWAYS" hbarPolicy="AS_NEEDED"
                         fitToWidth="true" fitToHeight="true"
                         VBox.vgrow="ALWAYS"
-                        minHeight="300">   <!-- минимум 300px, а дальше растягивается -->
+                        minHeight="300">
 
                 <VBox fx:id="tracksContainer" spacing="14" style="-fx-padding: 10;"/>
             </ScrollPane>

@@ -25,7 +25,7 @@ public class DatabaseHelper {
                 """
                 CREATE TABLE IF NOT EXISTS Artist (
                     ArtistID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Name TEXT NOT NULL,
+                    Name TEXT NOT NULL,  /* <-- ЗДЕСЬ ДОБАВЛЕНА ЗАПЯТАЯ */
                     Genre Text NOT NULL
                 );
                 """,
@@ -42,7 +42,7 @@ public class DatabaseHelper {
                 """,
 
                 // === АФИША ===
-                                """
+                """
                 CREATE TABLE IF NOT EXISTS Afisha (
                     AfishaID INTEGER PRIMARY KEY AUTOINCREMENT,
                     Title TEXT NOT NULL,
@@ -54,7 +54,7 @@ public class DatabaseHelper {
                 """,
 
                 // === ЛЮБИМЫЕ АВТОРЫ ===
-                                """
+                """
                 CREATE TABLE IF NOT EXISTS UserLikeAuthor (
                     UserID INTEGER,
                     ArtistID INTEGER,
@@ -96,17 +96,6 @@ public class DatabaseHelper {
                     TrackURL TEXT,
                     FOREIGN KEY (ArtistID) REFERENCES Artist(ArtistID) ON DELETE SET NULL,
                     FOREIGN KEY (AlbumID) REFERENCES Album(AlbumID) ON DELETE SET NULL
-                );
-                """,
-
-                // Плейлисты
-                """
-                CREATE TABLE IF NOT EXISTS Playlist (
-                    PlaylistID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    UserID INTEGER,
-                    Title TEXT NOT NULL,
-                    CreationDate TEXT DEFAULT (datetime('now')),
-                    FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE
                 );
                 """,
 

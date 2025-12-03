@@ -7,6 +7,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.layout.*;
 import java.net.URL;
 import java.sql.*;
@@ -14,6 +16,7 @@ import java.util.ResourceBundle;
 
 public class SearchController implements Initializable {
 
+    // FXML поля
     @FXML private HBox genresContainer;
     @FXML private VBox tracksSection;
     @FXML private Label genreTitleLabel;
@@ -21,9 +24,30 @@ public class SearchController implements Initializable {
     @FXML private VBox artistsSection;
     @FXML private VBox artistsContainer;
 
+    // FXML поля для поиска
+    @FXML private TextField searchField;
+    @FXML private ChoiceBox<String> searchTypeChoiceBox;
+    @FXML private Label artistsTitleLabel;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         loadGenres();
+        setupSearch(); // Инициализация логики поиска
+    }
+
+    private void setupSearch() {
+        // Инициализация фильтра поиска
+        searchTypeChoiceBox.getItems().addAll("Трек", "Артист");
+        searchTypeChoiceBox.setValue("Трек"); // Значение по умолчанию
+
+        // Добавляем слушателя к полю ввода и ChoiceBox
+        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
+            performSearch(newValue.trim(), searchTypeChoiceBox.getValue());
+        });
+
+        searchTypeChoiceBox.valueProperty().addListener((observable, oldValue, newValue) -> {
+            performSearch(searchField.getText().trim(), newValue);
+        });
     }
 
     private void loadGenres() {
@@ -50,7 +74,7 @@ public class SearchController implements Initializable {
     private VBox createGenreCard(int genreId, String name, String description) {
         VBox card = new VBox(14);
         card.setPadding(new Insets(28, 24, 28, 24));
-        card.setPrefSize(180, 180);           // ← вот так лучше: фиксированный размер
+        card.setPrefSize(180, 180);
         card.setMaxSize(180, 180);
         card.setAlignment(Pos.CENTER_LEFT);
 
@@ -58,7 +82,7 @@ public class SearchController implements Initializable {
                 "-fx-background-radius: 24; " +
                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0.3, 0, 8);");
 
-        // Эффект наведения (опционально)
+        // Эффект наведения
         card.setOnMouseEntered(e -> card.setScaleX(1.06));
         card.setOnMouseExited(e -> card.setScaleX(1.0));
         card.setCursor(Cursor.HAND);
@@ -91,8 +115,12 @@ public class SearchController implements Initializable {
         } + "-fx-background-radius: 16; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 4);";
     }
 
+    // ЛОГИКА ОТОБРАЖЕНИЯ ПО ЖАНРУ
     private void showTracksByGenre(int genreId, String genreName) {
+        // Устанавливаем заголовки по умолчанию для режима просмотра жанра
         genreTitleLabel.setText("Треки жанра: " + genreName);
+        artistsTitleLabel.setText("Исполнители этого жанра");
+
         tracksContainer.getChildren().clear();
         artistsContainer.getChildren().clear();
 
@@ -102,16 +130,16 @@ public class SearchController implements Initializable {
         artistsSection.setVisible(true);
         artistsSection.setManaged(true);
 
-        // SQL для треков
+        // SQL для треков: Используем t.Duration
         String trackSql = """
-        SELECT t.Title, a.Name AS ArtistName
+        SELECT t.Title, a.Name AS ArtistName, t.Duration 
         FROM Track t
         LEFT JOIN Artist a ON t.ArtistID = a.ArtistID
         WHERE t.GenreID = ?
         ORDER BY t.Title
         """;
 
-        // SQL для исполнителей (по Genre ID)
+        // SQL для исполнителей: Используем Artist.Genre (это числовой ID)
         String artistSql = """
         SELECT ArtistID, Name
         FROM Artist
@@ -121,65 +149,34 @@ public class SearchController implements Initializable {
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db")) {
 
-            // === 1. Загрузка Треков (как было) ===
+            // === 1. Загрузка Треков ===
             try (PreparedStatement ps = conn.prepareStatement(trackSql)) {
                 ps.setInt(1, genreId);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         String title = rs.getString("Title");
                         String artist = rs.getString("ArtistName");
-                        if (artist == null) artist = "Неизвестный";
-
-                        HBox row = new HBox(15);
-                        row.setPadding(new Insets(12));
-                        row.setStyle("-fx-background-color: white; -fx-background-radius: 10;");
-                        row.setAlignment(Pos.CENTER_LEFT);
-
-                        row.getChildren().addAll(
-                                new Label(title),
-                                new Region() {{ HBox.setHgrow(this, Priority.ALWAYS); }},
-                                new Label(artist)
-                        );
-                        tracksContainer.getChildren().add(row);
+                        // Используем столбец Duration
+                        int duration = rs.getInt("Duration");
+                        displayTrackRow(title, artist, duration, tracksContainer);
                     }
                 }
             }
 
-            // === 2. Загрузка Исполнителей (ТЕПЕРЬ СПИСКОМ) ===
+            // === 2. Загрузка Исполнителей ===
             try (PreparedStatement ps = conn.prepareStatement(artistSql)) {
+                // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: привязываем числовой ID к Artist.Genre
                 ps.setInt(1, genreId);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         String name = rs.getString("Name");
-                        // int artistId = rs.getInt("ArtistID");
-
-                        // Создаем строку (HBox) вместо карточки (VBox)
-                        HBox row = new HBox(15);
-                        row.setPadding(new Insets(12));
-                        // Белый фон, как у треков, и курсор "рука"
-                        row.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-cursor: hand;");
-                        row.setAlignment(Pos.CENTER_LEFT);
-
-                        // Эффект наведения мыши (опционально, для красоты)
-                        row.setOnMouseEntered(e -> row.setStyle("-fx-background-color: #f0f0f0; -fx-background-radius: 10; -fx-cursor: hand;"));
-                        row.setOnMouseExited(e -> row.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-cursor: hand;"));
-
-                        Label nameLabel = new Label(name);
-                        nameLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
-
-                        // Добавляем элементы в строку
-                        row.getChildren().add(nameLabel);
-
-                        // Обработка клика
-                        row.setOnMouseClicked(e -> System.out.println("Переход к исполнителю: " + name));
-
-                        artistsContainer.getChildren().add(row);
+                        displayArtistRow(name, artistsContainer);
                     }
                 }
             }
 
             if (artistsContainer.getChildren().isEmpty()) {
-                Label empty = new Label("Исполнителей пока нет");
+                Label empty = new Label("Исполнителей в этом жанре пока нет");
                 empty.setStyle("-fx-text-fill: #95a5a6; -fx-padding: 10;");
                 artistsContainer.getChildren().add(empty);
             }
@@ -189,20 +186,164 @@ public class SearchController implements Initializable {
         }
     }
 
+    // ====================================================================
+    // ЛОГИКА ПОИСКА
+    // ====================================================================
+
+    private void performSearch(String query, String type) {
+        tracksContainer.getChildren().clear();
+        artistsContainer.getChildren().clear();
+
+        if (query.isEmpty()) {
+            tracksSection.setVisible(false);
+            tracksSection.setManaged(false);
+            artistsSection.setVisible(false);
+            artistsSection.setManaged(false);
+            return;
+        }
+
+        boolean isTrackSearch = "Трек".equals(type);
+        tracksSection.setVisible(isTrackSearch);
+        tracksSection.setManaged(isTrackSearch);
+        artistsSection.setVisible(!isTrackSearch);
+        artistsSection.setManaged(!isTrackSearch);
+
+        String normalizedQuery = "%" + query + "%";
+
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db")) {
+
+            if (isTrackSearch) {
+                // Поиск треков: Используем t.Duration
+                String sql = """
+                SELECT t.Title, a.Name AS ArtistName, t.Duration
+                FROM Track t
+                LEFT JOIN Artist a ON t.ArtistID = a.ArtistID
+                WHERE LOWER(t.Title) LIKE LOWER(?)
+                ORDER BY t.Title
+                """;
+
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, normalizedQuery);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        displayTrackResults(rs, query);
+                    }
+                }
+
+            } else { // Артист Search
+
+                // Поиск артистов: table: Artist, column: Name
+                String sql = """
+                SELECT ArtistID, Name
+                FROM Artist
+                WHERE LOWER(Name) LIKE LOWER(?)
+                ORDER BY Name
+                """;
+
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, normalizedQuery);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        displayArtistResults(rs, query);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ====================================================================
+    // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ОТОБРАЖЕНИЯ
+    // ====================================================================
+
+    private void displayTrackResults(ResultSet rs, String query) throws SQLException {
+        genreTitleLabel.setText("Результаты поиска треков по запросу: \"" + query + "\"");
+        int count = 0;
+        while (rs.next()) {
+            String title = rs.getString("Title");
+            String artist = rs.getString("ArtistName");
+            // Используем столбец Duration
+            int duration = rs.getInt("Duration");
+            displayTrackRow(title, artist, duration, tracksContainer);
+            count++;
+        }
+        if (count == 0) {
+            genreTitleLabel.setText("Треки не найдены по запросу: \"" + query + "\"");
+            Label empty = new Label("Попробуйте другой запрос или проверьте тип поиска.");
+            empty.setStyle("-fx-text-fill: #95a5a6; -fx-padding: 20;");
+            tracksContainer.getChildren().add(empty);
+        }
+    }
+
+    private void displayArtistResults(ResultSet rs, String query) throws SQLException {
+        artistsTitleLabel.setText("Результаты поиска исполнителей по запросу: \"" + query + "\"");
+        int count = 0;
+        while (rs.next()) {
+            String name = rs.getString("Name");
+            displayArtistRow(name, artistsContainer);
+            count++;
+        }
+        if (count == 0) {
+            artistsTitleLabel.setText("Исполнители не найдены по запросу: \"" + query + "\"");
+            Label empty = new Label("Попробуйте другой запрос или проверьте тип поиска.");
+            empty.setStyle("-fx-text-fill: #95a5a6; -fx-padding: 20;");
+            artistsContainer.getChildren().add(empty);
+        }
+    }
+
+    // Общий метод для создания строки трека
+    private void displayTrackRow(String title, String artist, int duration, VBox container) {
+        String durationFormatted = formatDuration(duration);
+        if (artist == null) artist = "Неизвестный";
+
+        HBox row = new HBox(15);
+        row.setPadding(new Insets(12));
+        row.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-cursor: hand;");
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 15; -fx-text-fill: #34495e;");
+
+        Label artistLabel = new Label(artist);
+        artistLabel.setStyle("-fx-font-size: 14; -fx-text-fill: #7f8c8d;");
+
+        Label durationLabel = new Label(durationFormatted);
+        durationLabel.setStyle("-fx-font-size: 14; -fx-text-fill: #95a5a6;");
+
+        row.getChildren().addAll(
+                titleLabel,
+                new Region() {{ HBox.setHgrow(this, Priority.ALWAYS); }},
+                artistLabel,
+                durationLabel
+        );
+
+        row.setOnMouseClicked(e -> System.out.println("Воспроизвести трек: " + title));
+        container.getChildren().add(row);
+    }
+
+    // Общий метод для создания строки артиста
+    private void displayArtistRow(String name, VBox container) {
+        HBox row = new HBox(15);
+        row.setPadding(new Insets(12));
+        row.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-cursor: hand;");
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        row.setOnMouseEntered(e -> row.setStyle("-fx-background-color: #f0f0f0; -fx-background-radius: 10; -fx-cursor: hand;"));
+        row.setOnMouseExited(e -> row.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-cursor: hand;"));
+
+        Label nameLabel = new Label(name);
+        nameLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+
+        row.getChildren().add(nameLabel);
+
+        row.setOnMouseClicked(e -> System.out.println("Переход к исполнителю: " + name));
+
+        container.getChildren().add(row);
+    }
+
     private String formatDuration(int seconds) {
         int m = seconds / 60;
         int s = seconds % 60;
         return String.format("%d:%02d", m, s);
-    }
-
-    private static int getGenreId(Connection conn, String name) throws SQLException {
-        String sql = "SELECT GenreID FROM Genre WHERE Name = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, name);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt(1);
-            }
-        }
-        return 1; // fallback
     }
 }
