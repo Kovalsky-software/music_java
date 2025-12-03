@@ -72,6 +72,12 @@
                    style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
             <Separator prefWidth="500"/>
 
+            <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 0 0 10 0;">
+                <Label text="Сортировать по:"/>
+                <ChoiceBox fx:id="afishaSortColumn" prefWidth="120"/>
+                <ChoiceBox fx:id="afishaSortDirection" prefWidth="120"/>
+            </HBox>
+
             <ScrollPane vbarPolicy="NEVER" hbarPolicy="AS_NEEDED" fitToWidth="true">
                 <FlowPane fx:id="afishaContainer"
                           hgap="18" vgap="18"

@@ -145,6 +145,14 @@ public class DatabaseHelper {
                 );
                 """,
 
+                // Настройки приложения (для сохранения состояния)
+                """
+                CREATE TABLE IF NOT EXISTS Settings (
+                    Key TEXT PRIMARY KEY,
+                    Value TEXT
+                );
+                """,
+
                 // Активные подписки
                 """
                 CREATE TABLE IF NOT EXISTS UserSubscription (
@@ -230,6 +238,90 @@ public class DatabaseHelper {
             System.out.println("Регистрация не удалась: " + e.getMessage());
             return false;
         }
+    }
+
+    private static void saveSetting(String key, String value) {
+        String sql = "INSERT OR REPLACE INTO Settings (Key, Value) VALUES (?, ?)";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            pstmt.setString(2, value);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Ошибка сохранения настройки: " + key);
+        }
+    }
+
+    private static String loadSetting(String key, String defaultValue) {
+        String sql = "SELECT Value FROM Settings WHERE Key = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("Value");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Ошибка загрузки настройки: " + key);
+        }
+        return defaultValue;
+    }
+
+    // --- Методы для работы с окном ---
+
+    public static void saveWindowState(double x, double y, double width, double height) {
+        saveSetting("window_x", String.valueOf(x));
+        saveSetting("window_y", String.valueOf(y));
+        saveSetting("window_width", String.valueOf(width));
+        saveSetting("window_height", String.valueOf(height));
+    }
+
+    // Возвращает массив [x, y, width, height]
+    public static double[] loadWindowState() {
+        double x = Double.parseDouble(loadSetting("window_x", "100.0"));
+        double y = Double.parseDouble(loadSetting("window_y", "100.0"));
+        // Минимальные размеры окна (300x300, как вы просили, но сделаем чуть больше для удобства)
+        double width = Double.parseDouble(loadSetting("window_width", "800.0"));
+        double height = Double.parseDouble(loadSetting("window_height", "700.0"));
+
+        // Гарантируем минимальный размер
+        if (width < 300) width = 300;
+        if (height < 300) height = 300;
+
+        return new double[]{x, y, width, height};
+    }
+
+    // --- Методы для работы с пользователем ---
+
+    public static void saveLastLoggedInUser(int userId) {
+        saveSetting("last_user_id", String.valueOf(userId));
+    }
+
+    public static int loadLastLoggedInUserId() {
+        // Возвращаем -1, если пользователь не найден (значение по умолчанию)
+        return Integer.parseInt(loadSetting("last_user_id", "-1"));
+    }
+
+    // Вспомогательный метод для получения объекта User по ID
+    public static User getUserById(int userId) {
+        String sql = "SELECT UserID, Username, Email FROM User WHERE UserID = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new User(
+                            rs.getInt("UserID"),
+                            rs.getString("Username"),
+                            rs.getString("Email")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public static User loginUser(String usernameOrEmail, String password) {
