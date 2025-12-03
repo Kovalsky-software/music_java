@@ -43,22 +43,22 @@
             <Label text="Любимое" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
             <Separator prefWidth="500"/>
 
-            <HBox spacing="30" alignment="CENTER_LEFT">
-                <ToggleButton fx:id="toggleTracks" text="Треки" selected="true"
-                              toggleGroup="$favoriteToggleGroup"
-                              style="-fx-font-size: 16; -fx-padding: 10 25; -fx-background-radius: 8;"/>
-
-                <ToggleButton fx:id="togglePlaylists" text="Плейлисты"
-                              toggleGroup="$favoriteToggleGroup"
-                              style="-fx-font-size: 16; -fx-padding: 10 25; -fx-background-radius: 8;"/>
-            </HBox>
-
-            <fx:define>
-                <ToggleGroup fx:id="favoriteToggleGroup"/>
-            </fx:define>
-
             <ScrollPane vbarPolicy="NEVER" hbarPolicy="AS_NEEDED" fitToWidth="true">
                 <FlowPane fx:id="favoriteContentContainer" hgap="18" vgap="18" prefWrapLength="800"/>
+            </ScrollPane>
+        </VBox>
+
+        <!-- ЛЮБИМЫЕ ПЛЕЙЛИСТЫ -->
+        <VBox spacing="12">
+            <Label text="Любимые плейлисты"
+                   style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Separator prefWidth="500"/>
+
+            <ScrollPane vbarPolicy="NEVER" hbarPolicy="AS_NEEDED" fitToWidth="true">
+                <FlowPane fx:id="favoritePlaylistsContainer"
+                          hgap="18" vgap="18"
+                          prefWrapLength="600"
+                          alignment="CENTER_LEFT"/>
             </ScrollPane>
         </VBox>
 
