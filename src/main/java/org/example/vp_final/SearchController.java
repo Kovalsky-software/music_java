@@ -102,7 +102,7 @@ public class SearchController implements Initializable {
         artistsSection.setVisible(true);
         artistsSection.setManaged(true);
 
-        // === Загрузка треков ===
+        // === Загрузка треков (без изменений) ===
         String trackSql = """
         SELECT t.Title, a.Name AS ArtistName
         FROM Track t
@@ -111,17 +111,18 @@ public class SearchController implements Initializable {
         ORDER BY t.Title
         """;
 
-        // === Загрузка исполнителей по жанру (через колонку ArtistGenre) ===
+        // === ИЗМЕНЕНИЕ: Загрузка исполнителей по ID жанра ===
+        // Мы ищем в таблице Artist, где колонка Genre совпадает с genreId
         String artistSql = """
         SELECT ArtistID, Name
         FROM Artist
-        WHERE ArtistGenre = (SELECT Name FROM Genre WHERE GenreID = ?)
+        WHERE Genre = ?
         ORDER BY Name
         """;
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db")) {
 
-            // Треки
+            // 1. Загрузка Треков
             try (PreparedStatement ps = conn.prepareStatement(trackSql)) {
                 ps.setInt(1, genreId);
                 try (ResultSet rs = ps.executeQuery()) {
@@ -140,39 +141,47 @@ public class SearchController implements Initializable {
                                 new Region() {{ HBox.setHgrow(this, Priority.ALWAYS); }},
                                 new Label(artist)
                         );
-
                         tracksContainer.getChildren().add(row);
                     }
                 }
             }
 
-            // Исполнители
+            // 2. Загрузка Исполнителей (Новая логика)
             try (PreparedStatement ps = conn.prepareStatement(artistSql)) {
+                // Передаем ID жанра, так как вы указали, что в колонке Genre хранится ключ
                 ps.setInt(1, genreId);
+
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         String name = rs.getString("Name");
+                        // int artistId = rs.getInt("ArtistID"); // Если понадобится для клика
 
                         VBox card = new VBox(10);
                         card.setPadding(new Insets(20));
                         card.setMinWidth(140);
+                        // Стиль карточки исполнителя
                         card.setStyle("-fx-background-color: #3498db; -fx-background-radius: 16; -fx-cursor: hand;");
+                        card.setAlignment(Pos.CENTER);
 
                         Label nameLabel = new Label(name);
                         nameLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15;");
+                        nameLabel.setWrapText(true);
 
                         card.getChildren().add(nameLabel);
+
+                        // Обработка клика по исполнителю (заглушка)
                         card.setOnMouseClicked(e -> System.out.println("Открыть исполнителя: " + name));
 
                         artistsContainer.getChildren().add(card);
                     }
-
-                    if (artistsContainer.getChildren().isEmpty()) {
-                        Label empty = new Label("Исполнителей в этом жанре пока нет");
-                        empty.setStyle("-fx-text-fill: #95a5a6; -fx-padding: 20;");
-                        artistsContainer.getChildren().add(empty);
-                    }
                 }
+            }
+
+            // Если исполнителей нет, показываем сообщение
+            if (artistsContainer.getChildren().isEmpty()) {
+                Label empty = new Label("Исполнителей в этом жанре пока нет");
+                empty.setStyle("-fx-text-fill: #95a5a6; -fx-padding: 20;");
+                artistsContainer.getChildren().add(empty);
             }
 
         } catch (Exception e) {
