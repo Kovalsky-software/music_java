@@ -207,15 +207,16 @@ public class HomeController implements Initializable {
     }
 
     private void loadUserPlaylists() {
-        if (currentUser == null || userPlaylistsContainer == null) {
-            System.out.println("loadUserPlaylists: пользователь или контейнер = null");
-            return;
-        }
+        if (currentUser == null || userPlaylistsContainer == null) return;
 
         userPlaylistsContainer.getChildren().clear();
-        System.out.println("Загружаем плейлисты для UserID = " + currentUser.userId());
 
-        String sql = "SELECT Title FROM Playlist WHERE UserID = ? ORDER BY CreationDate DESC";
+        String sql = """
+            SELECT PlaylistID, Title, CreationDate 
+            FROM Playlist 
+            WHERE UserID = ? 
+            ORDER BY CreationDate DESC
+            """;
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -227,31 +228,67 @@ public class HomeController implements Initializable {
 
             while (rs.next()) {
                 hasPlaylists = true;
+                int id = rs.getInt("PlaylistID");
                 String title = rs.getString("Title");
-                System.out.println("Найден плейлист: " + title);
+                String date = rs.getString("CreationDate");
 
-                VBox playlistCard = new VBox(12);
-                playlistCard.setPadding(new Insets(20));
-                playlistCard.setMinWidth(160);
-                playlistCard.setStyle("-fx-background-color: #9b59b6; -fx-background-radius: 16; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0.2, 0, 4); -fx-cursor: hand;");
-
-                Label titleLabel = new Label(title);
-                titleLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16;");
-                playlistCard.getChildren().add(titleLabel);
-
-                userPlaylistsContainer.getChildren().add(playlistCard);
+                VBox card = createPlaylistCard(id, title, date);
+                userPlaylistsContainer.getChildren().add(card);
             }
 
             if (!hasPlaylists) {
-                System.out.println("Плейлистов нет → показываем заглушку");
-                showPlaceholder(userPlaylistsContainer, "Вы ещё не создали ни одного плейлиста"); // ИСПРАВЛЕННЫЙ ВЫЗОВ
+                Label empty = new Label("У вас пока нет плейлистов");
+                empty.setStyle("-fx-font-size: 16; -fx-text-fill: #95a5a6; -fx-padding: 30;");
+                userPlaylistsContainer.getChildren().add(empty);
             }
 
         } catch (SQLException e) {
-            System.out.println("ОШИБКА SQL при загрузке плейлистов:");
             e.printStackTrace();
-            showPlaceholder(userPlaylistsContainer, "Ошибка загрузки плейлистов"); // ИСПРАВЛЕННЫЙ ВЫЗОВ
+            Label error = new Label("Ошибка загрузки плейлистов");
+            userPlaylistsContainer.getChildren().add(error);
         }
+    }
+
+    private VBox createPlaylistCard(int id, String title, String date) {
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(16));
+        card.setStyle("""
+            -fx-background-color: #ffffff;
+            -fx-background-radius: 14;
+            -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0.2, 0, 3);
+            -fx-pref-width: 220;
+            -fx-cursor: hand;
+            """);
+
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+        titleLabel.setWrapText(true);
+
+        Label dateLabel = new Label("Создан: " + formatDate(date));
+        dateLabel.setStyle("-fx-font-size: 12; -fx-text-fill: #7f8c8d;");
+
+        card.getChildren().addAll(titleLabel, dateLabel);
+
+        // При клике — можно открыть плейлист (в будущем)
+        card.setOnMouseClicked(e -> {
+            System.out.println("Открыт плейлист: " + title + " (ID: " + id + ")");
+            // Здесь потом можно открыть экран с содержимым плейлиста
+        });
+
+        return card;
+    }
+
+    private String formatDate(String sqliteDate) {
+        if (sqliteDate == null) return "Неизвестно";
+        try {
+            return sqliteDate.substring(0, 10); // "2025-12-25 10:30:00" → "2025-12-25"
+        } catch (Exception e) {
+            return sqliteDate;
+        }
+    }
+
+    public void refreshPlaylists() {
+        loadUserPlaylists();
     }
 
     private void loadFavoriteTracks() {
