@@ -55,6 +55,9 @@ public class MainController {
 
     public void showHome() {
         contentArea.getChildren().setAll(homeView);
+        if (homeController != null && currentUser != null) {
+            homeController.setUser(currentUser); // ← Это обновит плейлисты при возврате
+        }
     }
 
     public void showSearch() {

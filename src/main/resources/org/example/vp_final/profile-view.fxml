@@ -73,17 +73,26 @@
         </VBox>
 
         <!-- === ПЛЕЙЛИСТЫ === -->
-        <VBox spacing="12">
-            <Label text="Мои плейлисты" style="-fx-font-size: 22; -fx-font-weight: bold;"/>
-            <Separator prefWidth="300"/>
-            <VBox spacing="10">
-                <Label text="Летний вайб · 24 трека"
-                       style="-fx-padding: 12; -fx-background-color: #ecf0f1; -fx-background-radius: 10;"/>
-                <Label text="Для тренировок · 18 треков"
-                       style="-fx-padding: 12; -fx-background-color: #ecf0f1; -fx-background-radius: 10;"/>
-                <Label text="Чилловый вечер · 31 трек"
-                       style="-fx-padding: 12; -fx-background-color: #ecf0f1; -fx-background-radius: 10;"/>
-            </VBox>
+        <VBox spacing="15">
+            <Label text="Мои плейлисты"
+                   style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+            <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 0 0 10 0;">
+                <TextField fx:id="newPlaylistTitleField"
+                           promptText="Название нового плейлиста"
+                           prefWidth="250"
+                           style="-fx-background-radius: 5; -fx-padding: 0 10;"/>
+                <Button text="Добавить" onAction="#onCreateNewPlaylist"
+                        style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 14; -fx-padding: 8 15; -fx-background-radius: 5;"/>
+                <Label fx:id="playlistMessageLabel" text="" style="-fx-text-fill: #e74c3c;"/>
+            </HBox>
+
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" minHeight="200" maxHeight="400">
+                <FlowPane fx:id="playlistsContainer"
+                          hgap="15" vgap="15"
+                          alignment="TOP_LEFT"
+                          style="-fx-padding: 10;"/>
+            </ScrollPane>
         </VBox>
 
         <!-- === НАСТРОЙКИ === -->
