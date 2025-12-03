@@ -46,6 +46,8 @@ public class AuthController {
 
         User user = DatabaseHelper.loginUser(username, password);
         if (user != null) {
+            // *** КЛЮЧЕВОЕ ИЗМЕНЕНИЕ (1): Сохраняем ID пользователя ***
+            DatabaseHelper.saveLastLoggedInUser(user.userId());
             openMainScreen(user);
         } else {
             messageLabel.setTextFill(javafx.scene.paint.Color.web("#e74c3c"));
@@ -55,19 +57,31 @@ public class AuthController {
 
     private void openMainScreen(User user) {
         try {
+            // *** КЛЮЧЕВОЕ ИЗМЕНЕНИЕ (2): Загружаем сохраненное состояние окна ***
+            double[] state = DatabaseHelper.loadWindowState(); // [x, y, width, height]
+
             FXMLLoader loader = new FXMLLoader(
                     MainApplication.class.getResource("/org/example/vp_final/main-layout.fxml")
             );
-            Scene scene = new Scene(loader.load(), 600, 700);
+            // *** КЛЮЧЕВОЕ ИЗМЕНЕНИЕ (3): Используем сохраненные размеры ***
+            Scene scene = new Scene(loader.load(), state[2], state[3]);
 
             MainController controller = loader.getController();
             controller.setUser(user);
 
             Stage stage = (Stage) usernameField.getScene().getWindow();
             stage.setScene(scene);
-            stage.setTitle("Моё приложение");
-            stage.setResizable(false);
-            stage.centerOnScreen();
+            stage.setTitle("Музыка");
+
+            // *** КЛЮЧЕВОЕ ИЗМЕНЕНИЕ (4): Разрешаем изменение размера ***
+            stage.setResizable(true);
+
+            // *** КЛЮЧЕВОЕ ИЗМЕНЕНИЕ (5): УДАЛЯЕМ centerOnScreen() ***
+            // stage.centerOnScreen();
+
+            // stage.setX(state[0]); // Эти строки не нужны, т.к. stage уже получил x/y от MainApplication
+            // stage.setY(state[1]);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
