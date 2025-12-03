@@ -324,6 +324,23 @@ public class DatabaseHelper {
         return null;
     }
 
+    // создание плейлиста в профиле
+    public static boolean createPlaylist(int userId, String title) {
+        // Убрано 'CreationDate' из списка столбцов, так как оно заполняется DEFAULT (datetime('now'))
+        String sql = "INSERT INTO Playlist (UserID, Title) VALUES (?, ?)";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setString(2, title);
+            pstmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Ошибка создания плейлиста: " + title + " для UserID=" + userId);
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public static User loginUser(String usernameOrEmail, String password) {
         String sql = "SELECT UserID, Username, Email, PasswordHash FROM User WHERE Username = ? OR Email = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL);

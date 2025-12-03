@@ -1,5 +1,6 @@
 package org.example.vp_final;
 
+import javafx.scene.control.TextField;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -25,6 +26,11 @@ public class ProfileController {
     @FXML private FlowPane likedTracksContainer;
     @FXML private FlowPane favoriteAuthorsContainer;
 
+    // === НОВОЕ: поля для плейлистов ===
+    @FXML private TextField newPlaylistTitleField;
+    @FXML private Label playlistMessageLabel;
+    @FXML private FlowPane playlistsContainer;
+
     private User currentUser;
     private boolean aboutExpanded = false;
     private HostServices hostServices;
@@ -36,6 +42,7 @@ public class ProfileController {
         idLabel.setText("ID: " + user.userId());
         loadFavoriteAuthors();
         loadLikedTracks();  // ← Загружаем "Нравится" сразу при входе в профиль
+        loadPlaylists();    // ← НОВОЕ: Загружаем плейлисты сразу при входе в профиль
     }
 
     public void setHostServices(HostServices hostServices) {
@@ -216,6 +223,153 @@ public class ProfileController {
 
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    // ===================== НОВАЯ ЧАСТЬ: "Мои плейлисты" =====================
+
+    private void loadPlaylists() {
+        if (currentUser == null) return;
+        playlistsContainer.getChildren().clear();
+
+        String sql = "SELECT PlaylistID, Title, CreationDate FROM Playlist WHERE UserID = ? ORDER BY CreationDate DESC";
+
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, currentUser.userId());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                boolean hasPlaylists = false;
+                while (rs.next()) {
+                    hasPlaylists = true;
+                    int id = rs.getInt("PlaylistID");
+                    String title = rs.getString("Title");
+                    String date = rs.getString("CreationDate");
+                    VBox card = createPlaylistCard(id, title, date);
+                    playlistsContainer.getChildren().add(card);
+                }
+                if (!hasPlaylists) {
+                    Label empty = new Label("Создайте свой первый плейлист!");
+                    empty.setStyle("-fx-font-size: 16; -fx-text-fill: #95a5a6; -fx-padding: 20;");
+                    playlistsContainer.getChildren().add(empty);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            playlistMessageLabel.setText("Ошибка загрузки плейлистов");
+        }
+    }
+
+    private VBox createPlaylistCard(int id, String title, String date) {
+        VBox card = new VBox(8);
+        card.setPadding(new Insets(15));
+        card.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 12; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2); " +
+                "-fx-pref-width: 200; -fx-alignment: top-left; -fx-cursor: hand;");
+
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+
+        Label dateLabel = new Label("Создан: " + (date != null ? date.substring(0, 10) : "Неизвестно"));
+        dateLabel.setStyle("-fx-font-size: 12; -fx-text-fill: #7f8c8d;");
+
+        Label deleteBtn = new Label("Удалить");
+        deleteBtn.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 12; -fx-cursor: hand;");
+
+        deleteBtn.setOnMouseClicked(e -> {
+            e.consume();
+            removePlaylist(id, card);
+        });
+
+        card.getChildren().addAll(titleLabel, dateLabel, deleteBtn);
+
+        card.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
+            if (!e.getTarget().equals(deleteBtn)) {
+                System.out.println("Открыть плейлист ID: " + id + " (" + title + ")");
+                // Здесь добавьте логику открытия плейлиста (например, новый экран с треками плейлиста)
+            }
+        });
+
+        return card;
+    }
+
+    private void removePlaylist(int id, VBox card) {
+        String sql = "DELETE FROM Playlist WHERE PlaylistID = ? AND UserID = ?"; // Добавляем UserID для безопасности
+
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, id);
+            pstmt.setInt(2, currentUser.userId());
+            pstmt.executeUpdate();
+
+            playlistsContainer.getChildren().remove(card);
+
+            if (playlistsContainer.getChildren().isEmpty()) {
+                Label empty = new Label("Создайте свой первый плейлист!");
+                empty.setStyle("-fx-font-size: 16; -fx-text-fill: #95a5a6; -fx-padding: 20;");
+                playlistsContainer.getChildren().add(empty);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            playlistMessageLabel.setText("Ошибка удаления плейлиста");
+        }
+    }
+
+    @FXML
+    private void onCreateNewPlaylist() {
+        String title = newPlaylistTitleField.getText().trim();
+        if (title.isEmpty()) {
+            playlistMessageLabel.setText("Введите название плейлиста");
+            return;
+        }
+
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db")) {
+            // Проверка на уникальность названия для этого пользователя
+            String checkSql = "SELECT 1 FROM Playlist WHERE UserID = ? AND Title = ?";
+            try (PreparedStatement checkPstmt = conn.prepareStatement(checkSql)) {
+                checkPstmt.setInt(1, currentUser.userId());
+                checkPstmt.setString(2, title);
+                if (checkPstmt.executeQuery().next()) {
+                    playlistMessageLabel.setText("Плейлист с таким названием уже существует");
+                    return;
+                }
+            }
+
+            // Создание плейлиста
+            String insertSql = "INSERT INTO Playlist (UserID, Title) VALUES (?, ?)";
+            try (PreparedStatement insertPstmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+                insertPstmt.setInt(1, currentUser.userId());
+                insertPstmt.setString(2, title);
+                insertPstmt.executeUpdate();
+
+                try (ResultSet generatedKeys = insertPstmt.getGeneratedKeys()) {
+                    int newId = generatedKeys.next() ? generatedKeys.getInt(1) : -1;
+
+                    // Получить дату создания
+                    String dateSql = "SELECT CreationDate FROM Playlist WHERE PlaylistID = ?";
+                    try (PreparedStatement datePstmt = conn.prepareStatement(dateSql)) {
+                        datePstmt.setInt(1, newId);
+                        try (ResultSet dateRs = datePstmt.executeQuery()) {
+                            String 	CreationDate = dateRs.next() ? dateRs.getString(1) : "Теперь";
+
+                            // Добавить карточку в начало
+                            VBox card = createPlaylistCard(newId, title, CreationDate);
+                            if (!playlistsContainer.getChildren().isEmpty() && playlistsContainer.getChildren().get(0) instanceof Label) {
+                                playlistsContainer.getChildren().clear(); // Убрать заглушку
+                            }
+                            playlistsContainer.getChildren().add(0, card);
+
+                            newPlaylistTitleField.clear();
+                            playlistMessageLabel.setText("");
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            playlistMessageLabel.setText("Ошибка создания плейлиста");
         }
     }
 }

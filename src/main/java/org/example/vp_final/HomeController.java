@@ -51,9 +51,43 @@ public class HomeController implements Initializable {
     }
 
     private void loadLatestTracks() {
-        // Заглушка, чтобы не было ошибки "Cannot resolve method 'loadLatestTracks'"
-        System.out.println("Загрузка последних треков...");
-        // Здесь должна быть логика загрузки в newTracksContainer
+        newTracksContainer.getChildren().clear();
+
+        String sql = """
+    SELECT t.TrackID, t.Title, a.Name AS ArtistName, t.Duration
+    FROM Track t
+    JOIN Artist a ON t.ArtistID = a.ArtistID
+    ORDER BY t.TrackID DESC  -- Сортировка по ID трека, чтобы получить "новые"
+    LIMIT 6
+    """;
+
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            boolean hasTracks = false;
+
+            while (rs.next()) {
+                hasTracks = true;
+
+                int trackId = rs.getInt("TrackID");
+                String title = rs.getString("Title");
+                String artist = rs.getString("ArtistName");
+                if (artist == null) artist = "Неизвестный исполнитель";
+
+                // Используем уже существующий метод для создания карточки
+                VBox card = createTrackCard(trackId, title, artist);
+                newTracksContainer.getChildren().add(card);
+            }
+
+            if (!hasTracks) {
+                showPlaceholder(newTracksContainer, "В разделе 'Новое' пока нет треков.");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showPlaceholder(newTracksContainer, "Ошибка загрузки новых треков.");
+        }
     }
 
     private void setupAfishaSorting() {
