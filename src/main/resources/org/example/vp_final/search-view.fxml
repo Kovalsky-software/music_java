@@ -33,16 +33,19 @@
         </VBox>
 
         <!-- ИСПОЛНИТЕЛИ ПО ЖАНРУ -->
-        <VBox spacing="16" visible="false" managed="false" fx:id="artistsSection">
-            <Label text="Исполнители этого жанра"
-                   style="-fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-            <Separator/>
+        <VBox fx:id="artistsSection" spacing="16" visible="false" managed="false">
 
-            <ScrollPane vbarPolicy="NEVER" hbarPolicy="AS_NEEDED" fitToWidth="true">
-                <FlowPane fx:id="artistsContainer"
-                          hgap="18" vgap="18"
-                          prefWrapLength="600"
-                          alignment="CENTER_LEFT"/>
+            <Label text="Исполнители этого жанра"
+                   style="-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+            <Separator prefWidth="500"/>
+
+            <ScrollPane vbarPolicy="ALWAYS" hbarPolicy="AS_NEEDED"
+                        fitToWidth="true" fitToHeight="true"
+                        VBox.vgrow="ALWAYS"
+                        minHeight="300">
+
+                <VBox fx:id="artistsContainer" spacing="14" style="-fx-padding: 10;"/>
             </ScrollPane>
         </VBox>
 

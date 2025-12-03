@@ -19,7 +19,7 @@ public class SearchController implements Initializable {
     @FXML private Label genreTitleLabel;
     @FXML private VBox tracksContainer;
     @FXML private VBox artistsSection;
-    @FXML private FlowPane artistsContainer;
+    @FXML private VBox artistsContainer;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -102,7 +102,7 @@ public class SearchController implements Initializable {
         artistsSection.setVisible(true);
         artistsSection.setManaged(true);
 
-        // === Загрузка треков (без изменений) ===
+        // SQL для треков
         String trackSql = """
         SELECT t.Title, a.Name AS ArtistName
         FROM Track t
@@ -111,8 +111,7 @@ public class SearchController implements Initializable {
         ORDER BY t.Title
         """;
 
-        // === ИЗМЕНЕНИЕ: Загрузка исполнителей по ID жанра ===
-        // Мы ищем в таблице Artist, где колонка Genre совпадает с genreId
+        // SQL для исполнителей (по Genre ID)
         String artistSql = """
         SELECT ArtistID, Name
         FROM Artist
@@ -122,7 +121,7 @@ public class SearchController implements Initializable {
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db")) {
 
-            // 1. Загрузка Треков
+            // === 1. Загрузка Треков (как было) ===
             try (PreparedStatement ps = conn.prepareStatement(trackSql)) {
                 ps.setInt(1, genreId);
                 try (ResultSet rs = ps.executeQuery()) {
@@ -146,41 +145,42 @@ public class SearchController implements Initializable {
                 }
             }
 
-            // 2. Загрузка Исполнителей (Новая логика)
+            // === 2. Загрузка Исполнителей (ТЕПЕРЬ СПИСКОМ) ===
             try (PreparedStatement ps = conn.prepareStatement(artistSql)) {
-                // Передаем ID жанра, так как вы указали, что в колонке Genre хранится ключ
                 ps.setInt(1, genreId);
-
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         String name = rs.getString("Name");
-                        // int artistId = rs.getInt("ArtistID"); // Если понадобится для клика
+                        // int artistId = rs.getInt("ArtistID");
 
-                        VBox card = new VBox(10);
-                        card.setPadding(new Insets(20));
-                        card.setMinWidth(140);
-                        // Стиль карточки исполнителя
-                        card.setStyle("-fx-background-color: #3498db; -fx-background-radius: 16; -fx-cursor: hand;");
-                        card.setAlignment(Pos.CENTER);
+                        // Создаем строку (HBox) вместо карточки (VBox)
+                        HBox row = new HBox(15);
+                        row.setPadding(new Insets(12));
+                        // Белый фон, как у треков, и курсор "рука"
+                        row.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-cursor: hand;");
+                        row.setAlignment(Pos.CENTER_LEFT);
+
+                        // Эффект наведения мыши (опционально, для красоты)
+                        row.setOnMouseEntered(e -> row.setStyle("-fx-background-color: #f0f0f0; -fx-background-radius: 10; -fx-cursor: hand;"));
+                        row.setOnMouseExited(e -> row.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-cursor: hand;"));
 
                         Label nameLabel = new Label(name);
-                        nameLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15;");
-                        nameLabel.setWrapText(true);
+                        nameLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
 
-                        card.getChildren().add(nameLabel);
+                        // Добавляем элементы в строку
+                        row.getChildren().add(nameLabel);
 
-                        // Обработка клика по исполнителю (заглушка)
-                        card.setOnMouseClicked(e -> System.out.println("Открыть исполнителя: " + name));
+                        // Обработка клика
+                        row.setOnMouseClicked(e -> System.out.println("Переход к исполнителю: " + name));
 
-                        artistsContainer.getChildren().add(card);
+                        artistsContainer.getChildren().add(row);
                     }
                 }
             }
 
-            // Если исполнителей нет, показываем сообщение
             if (artistsContainer.getChildren().isEmpty()) {
-                Label empty = new Label("Исполнителей в этом жанре пока нет");
-                empty.setStyle("-fx-text-fill: #95a5a6; -fx-padding: 20;");
+                Label empty = new Label("Исполнителей пока нет");
+                empty.setStyle("-fx-text-fill: #95a5a6; -fx-padding: 10;");
                 artistsContainer.getChildren().add(empty);
             }
 
