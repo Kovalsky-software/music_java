@@ -287,6 +287,13 @@ public class HomeController implements Initializable {
         }
     }
 
+    @FXML
+    private void openSearch() {
+        if (mainController != null) {
+            mainController.showSearch();
+        }
+    }
+
 
 
     private VBox createFavoritePlaylistCard(String title, String owner, String date) {
