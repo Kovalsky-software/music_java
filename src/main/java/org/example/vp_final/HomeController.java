@@ -438,7 +438,6 @@ public class HomeController implements Initializable {
     }
     @FXML
     public void openSearch() {
-        System.out.println("КНОПКА ПОИСКА НАЖАТА! mainController = " + mainController);
         if (mainController != null) {
             mainController.showSearch();
         } else {
@@ -448,11 +447,11 @@ public class HomeController implements Initializable {
 
     @FXML
     public void openProfile() {
-        System.out.println("КНОПКА ПРОФИЛЯ НАЖАТА! mainController = " + mainController);
+
         if (mainController != null) {
             mainController.showProfile();
         } else {
-            System.out.println("ОШИБКА: mainController == null");
+            System.out.println("ОШИБКА: mainController == null → ничего не произойдёт");
         }
     }
 }

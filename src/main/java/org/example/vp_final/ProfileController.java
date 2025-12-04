@@ -318,6 +318,20 @@ public class ProfileController {
     }
 
     @FXML
+    private void openAddTrackWindow() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/example/vp_final/add-track-view.fxml"));
+            Stage stage = new Stage();
+            stage.setScene(new Scene(loader.load(), 600, 500));
+            stage.setTitle("Добавить трек");
+            stage.setResizable(false);
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
     private void onCreateNewPlaylist() {
         String title = newPlaylistTitleField.getText().trim();
         if (title.isEmpty()) {
