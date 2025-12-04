@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
 <?import javafx.scene.control.ToggleGroup?>
 
 
@@ -17,10 +18,35 @@
             <Insets top="30" right="20" bottom="40" left="20"/>
         </padding>
 
-        <!-- Заголовок с курсором HAND -->
+        <HBox alignment="CENTER_LEFT" spacing="20">
         <Label text="Моё Приложение"
                style="-fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-cursor: hand;"
                onMouseClicked="#openProfile"/>
+
+        <!-- Кнопки: Поиск и Профиль -->
+        <Region HBox.hgrow="ALWAYS"/> <!-- Растягивает пространство между заголовком и кнопками -->
+
+        <Button onAction="#openSearch"
+                style="-fx-background-color: transparent; -fx-cursor: hand;"
+                graphicTextGap="8">
+            <graphic>
+                <Text text="&#x1F50D;" style="-fx-font-size: 26; -fx-fill: #2c3e50;"/>
+            </graphic>
+            <tooltip>
+                <Tooltip text="Поиск"/>
+            </tooltip>
+        </Button>
+
+        <Button onAction="#openProfile"
+                style="-fx-background-color: transparent; -fx-cursor: hand;">
+            <graphic>
+                <Text text="&#x1F464;" style="-fx-font-size: 28; -fx-fill: #2c3e50;"/>
+            </graphic>
+            <tooltip>
+                <Tooltip text="Профиль"/>
+            </tooltip>
+        </Button>
+    </HBox>
 
         <!-- Кнопка ЗАПУСТИТЬ -->
         <VBox alignment="CENTER" spacing="15">
