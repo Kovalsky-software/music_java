@@ -14,6 +14,13 @@ public class MainApplication extends Application {
         DatabaseHelper.initDatabase();
 
         int lastUserId = DatabaseHelper.loadLastLoggedInUserId();
+        double[] windowState = DatabaseHelper.loadWindowState(); // [x, y, width, height]
+        double x = windowState[0];
+        double y = windowState[1];
+        double width = windowState[2];
+        double height = windowState[3];
+
+
 
         if (lastUserId != -1) {
             // Есть сохранённый пользователь → автоматически входим
@@ -23,28 +30,60 @@ public class MainApplication extends Application {
                 FXMLLoader loader = new FXMLLoader(
                         MainApplication.class.getResource("/org/example/vp_final/home-view.fxml")
                 );
-                Scene scene = new Scene(loader.load(), 1100, 800);
+                Scene scene = new Scene(loader.load(), width, height);
 
                 HomeController controller = loader.getController();
                 controller.setUser(savedUser);
 
                 stage.setTitle("Моё Приложение");
                 stage.setScene(scene);
+                stage.setX(x);
+                stage.setY(y);
+                stage.setWidth(width);
+                stage.setHeight(height);
                 stage.setResizable(true);
-                stage.centerOnScreen();
                 stage.show();
+                saveWindowStateOnClose(stage);
                 return;
             }
         }
 
-        FXMLLoader loader = new FXMLLoader(
-                MainApplication.class.getResource("/org/example/vp_final/auth-view.fxml")
+
+    }
+
+    private void saveWindowStateOnClose(Stage stage) {
+        stage.setOnCloseRequest(event -> {
+            if (stage.isMaximized()) {
+                // Если окно развёрнуто — сохраняем "нормальные" размеры
+                DatabaseHelper.saveWindowState(
+                        stage.getX(), stage.getY(),
+                        stage.getWidth(), stage.getHeight()
+                );
+            } else {
+                DatabaseHelper.saveWindowState(
+                        stage.getX(), stage.getY(),
+                        stage.getWidth(), stage.getHeight()
+                );
+            }
+        });
+
+        // Также сохраняем при изменении размеров/позиции (опционально, но надёжнее)
+        stage.xProperty().addListener((obs, old, newVal) -> saveIfNotAuth(stage));
+        stage.yProperty().addListener((obs, old, newVal) -> saveIfNotAuth(stage));
+        stage.widthProperty().addListener((obs, old, newVal) -> saveIfNotAuth(stage));
+        stage.heightProperty().addListener((obs, old, newVal) -> saveIfNotAuth(stage));
+    }
+
+    private void saveIfNotAuth(Stage stage) {
+        // Не сохраняем, если это окно авторизации
+        if (stage.getTitle().equals("Авторизация")) return;
+
+        DatabaseHelper.saveWindowState(
+                stage.getX(),
+                stage.getY(),
+                stage.getWidth(),
+                stage.getHeight()
         );
-        Scene scene = new Scene(loader.load(), 420, 550);
-        stage.setTitle("Авторизация");
-        stage.setResizable(false);
-        stage.setScene(scene);
-        stage.show();
     }
 
     public static void main(String[] args) {
