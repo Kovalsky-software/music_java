@@ -14,41 +14,37 @@ public class MainApplication extends Application {
         DatabaseHelper.initDatabase();
 
         int lastUserId = DatabaseHelper.loadLastLoggedInUserId();
-        double[] windowState = DatabaseHelper.loadWindowState(); // [x, y, width, height]
+        double[] windowState = DatabaseHelper.loadWindowState();
         double x = windowState[0];
         double y = windowState[1];
         double width = windowState[2];
         double height = windowState[3];
 
+        FXMLLoader mainLoader = new FXMLLoader(
+                MainApplication.class.getResource("/org/example/vp_final/main-layout.fxml")
+        );
+        Scene scene = new Scene(mainLoader.load(), width, height);
 
+        // Получаем главный контроллер
+        MainController mainController = mainLoader.getController();
 
         if (lastUserId != -1) {
-            // Есть сохранённый пользователь → автоматически входим
             User savedUser = DatabaseHelper.getUserById(lastUserId);
-
             if (savedUser != null) {
-                FXMLLoader loader = new FXMLLoader(
-                        MainApplication.class.getResource("/org/example/vp_final/home-view.fxml")
-                );
-                Scene scene = new Scene(loader.load(), width, height);
-
-                HomeController controller = loader.getController();
-                controller.setUser(savedUser);
-
-                stage.setTitle("Моё Приложение");
-                stage.setScene(scene);
-                stage.setX(x);
-                stage.setY(y);
-                stage.setWidth(width);
-                stage.setHeight(height);
-                stage.setResizable(true);
-                stage.show();
-                saveWindowStateOnClose(stage);
-                return;
+                mainController.setUser(savedUser);  // ← Это передаст пользователя ВО ВСЕ экраны
             }
         }
 
+        stage.setTitle("Моё Приложение");
+        stage.setScene(scene);
+        stage.setX(x);
+        stage.setY(y);
+        stage.setWidth(width);
+        stage.setHeight(height);
+        stage.setResizable(true);
+        stage.show();
 
+        saveWindowStateOnClose(stage);
     }
 
     private void saveWindowStateOnClose(Stage stage) {

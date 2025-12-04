@@ -31,6 +31,7 @@ public class HomeController implements Initializable {
 
     public void setMainController(MainController mainController) {
         this.mainController = mainController;
+        System.out.println("HomeController: mainController установлен = " + (mainController != null));
     }
 
     public void setUser(User user) {
@@ -287,15 +288,6 @@ public class HomeController implements Initializable {
         }
     }
 
-    @FXML
-    private void openSearch() {
-        if (mainController != null) {
-            mainController.showSearch();
-        }
-    }
-
-
-
     private VBox createFavoritePlaylistCard(String title, String owner, String date) {
         VBox card = new VBox(10);
         card.setPadding(new Insets(18));
@@ -444,8 +436,23 @@ public class HomeController implements Initializable {
     @FXML private void onMainAction() {
         System.out.println("Запуск основного действия");
     }
+    @FXML
+    public void openSearch() {
+        System.out.println("КНОПКА ПОИСКА НАЖАТА! mainController = " + mainController);
+        if (mainController != null) {
+            mainController.showSearch();
+        } else {
+            System.out.println("ОШИБКА: mainController == null → ничего не произойдёт");
+        }
+    }
 
-    @FXML private void openProfile() {
-        if (mainController != null) mainController.showProfile();
+    @FXML
+    public void openProfile() {
+        System.out.println("КНОПКА ПРОФИЛЯ НАЖАТА! mainController = " + mainController);
+        if (mainController != null) {
+            mainController.showProfile();
+        } else {
+            System.out.println("ОШИБКА: mainController == null");
+        }
     }
 }
