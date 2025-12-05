@@ -14,7 +14,6 @@
         <junit.version>5.12.1</junit.version>
     </properties>
 
-    <!-- FIX: repositories moved OUTSIDE <dependencies> -->
     <repositories>
         <repository>
             <id>jitpack.io</id>
@@ -32,6 +31,12 @@
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>21.0.6</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-media</artifactId>
+            <version>21.0.2</version>
         </dependency>
 
         <dependency>
@@ -58,20 +63,17 @@
             </exclusions>
         </dependency>
 
-        <!-- FIX: JitPack dependency is now valid -->
         <dependency>
             <groupId>org.jaudiotagger</groupId>
             <artifactId>jaudiotagger</artifactId>
             <version>2.0.1</version>
         </dependency>
 
-
         <dependency>
             <groupId>org.kordamp.ikonli</groupId>
             <artifactId>ikonli-javafx</artifactId>
             <version>12.3.1</version>
         </dependency>
-
         <dependency>
             <groupId>org.kordamp.bootstrapfx</groupId>
             <artifactId>bootstrapfx-core</artifactId>
@@ -84,7 +86,6 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
@@ -100,8 +101,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>25</source>
-                    <target>25</target>
+                    <source>21</source> <target>21</target>
                 </configuration>
             </plugin>
 
@@ -124,8 +124,6 @@
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
-
 </project>

@@ -6,11 +6,16 @@ import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
-
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.*;
 import java.net.URL;
 import java.sql.*;
 import java.util.*;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import java.util.ResourceBundle;
+import javafx.util.Duration;
 
 public class HomeController implements Initializable {
 
@@ -23,6 +28,15 @@ public class HomeController implements Initializable {
     // === Афиша ===
     @FXML private ChoiceBox<String> afishaSortColumn;
     @FXML private ChoiceBox<String> afishaSortDirection;
+    @FXML private Button playButton;
+    @FXML private Label currentTrackLabel;
+    @FXML private Slider volumeSlider;
+    @FXML private Label volumeLabel;
+
+    private MediaPlayer mediaPlayer;
+    private List<File> trackFiles = new ArrayList<>();
+    private int currentTrackIndex = -1;
+    private Random random = new Random();
 
     // Хранилище данных
     private List<AfishaEvent> afishaEvents = new ArrayList<>();
@@ -47,10 +61,93 @@ public class HomeController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         loadLatestTracks();
         setupAfishaSorting();
+        loadTrackFiles();
+        setupVolumeControl();
 
         // Загружаем контент при первом открытии экрана
         loadFavoriteTracksSection();
         loadFavoritePlaylistsSection();
+    }
+
+    private void loadTrackFiles() {
+        Path tracksDir = Path.of("tracks");
+        if (Files.exists(tracksDir) && Files.isDirectory(tracksDir)) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(tracksDir, "*.{mp3,wav,flac,ogg,m4a}")) {
+                for (Path path : stream) {
+                    trackFiles.add(path.toFile());
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (trackFiles.isEmpty()) {
+            currentTrackLabel.setText("Нет треков в папке tracks/");
+            playButton.setDisable(true);
+        }
+    }
+
+    private void setupVolumeControl() {
+        volumeSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            double volume = newVal.doubleValue() / 100.0;
+            if (mediaPlayer != null) {
+                mediaPlayer.setVolume(volume);
+            }
+            volumeLabel.setText(String.format("%.0f%%", newVal.doubleValue()));
+        });
+    }
+
+    @FXML
+    private void playRandomTrack() {
+        if (trackFiles.isEmpty()) return;
+
+        stopCurrentTrack();
+        currentTrackIndex = random.nextInt(trackFiles.size());
+        playTrack(trackFiles.get(currentTrackIndex));
+        playButton.setText("Стоп");
+        playButton.setOnAction(e -> stopCurrentTrackAndReset());
+    }
+
+    private void playTrack(File file) {
+        currentTrackLabel.setText("Играет: " + file.getName().replaceAll("^\\d+_", "").replace("_", " "));
+
+        Media media = new Media(file.toURI().toString());
+        mediaPlayer = new MediaPlayer(media);
+        mediaPlayer.setVolume(volumeSlider.getValue() / 100.0);
+
+        mediaPlayer.setOnEndOfMedia(this::playNext);
+        mediaPlayer.play();
+    }
+
+    private void stopCurrentTrack() {
+        if (mediaPlayer != null) {
+            mediaPlayer.stop();
+            mediaPlayer.dispose();
+            mediaPlayer = null;
+        }
+    }
+
+    private void stopCurrentTrackAndReset() {
+        stopCurrentTrack();
+        currentTrackLabel.setText("Нажмите ЗАПУСТИТЬ");
+        playButton.setText("ЗАПУСТИТЬ");
+        playButton.setOnAction(e -> playRandomTrack());
+    }
+
+    @FXML
+    private void playPrevious() {
+        if (trackFiles.isEmpty() || currentTrackIndex == -1) return;
+        stopCurrentTrack();
+        currentTrackIndex = (currentTrackIndex - 1 + trackFiles.size()) % trackFiles.size();
+        playTrack(trackFiles.get(currentTrackIndex));
+    }
+
+    @FXML
+    private void playNext() {
+        if (trackFiles.isEmpty() || currentTrackIndex == -1) return;
+        stopCurrentTrack();
+        currentTrackIndex = (currentTrackIndex + 1) % trackFiles.size();
+        playTrack(trackFiles.get(currentTrackIndex));
     }
 
     private void loadLatestTracks() {

@@ -48,13 +48,33 @@
         </Button>
     </HBox>
 
-        <!-- Кнопка ЗАПУСТИТЬ -->
-        <VBox alignment="CENTER" spacing="15">
-            <Button text="ЗАПУСТИТЬ" onAction="#onMainAction"
-                    prefWidth="300" prefHeight="90"
-                    style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 26; -fx-font-weight: bold;
-                           -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 5);"/>
-            <Label text="Нажми, чтобы начать" style="-fx-text-fill: #7f8c8d;"/>
+        <VBox alignment="CENTER" spacing="15" style="-fx-background-color: #2c3e50; -fx-background-radius: 20; -fx-padding: 20;">
+            <Label text="Музыкальный плеер" style="-fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: white;"/>
+
+            <!-- Название текущего трека -->
+            <Label fx:id="currentTrackLabel" text="Нажмите ЗАПУСТИТЬ"
+                   style="-fx-text-fill: #ecf0f1; -fx-font-size: 16;"
+                   wrapText="true" textAlignment="CENTER" prefWidth="400"/>
+
+            <!-- Кнопки управления -->
+            <HBox alignment="CENTER" spacing="20">
+                <Button text="Предыдущий" onAction="#playPrevious"
+                        style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-font-size: 16; -fx-padding: 10 20; -fx-background-radius: 30;"/>
+
+                <Button fx:id="playButton" text="ЗАПУСТИТЬ" onAction="#playRandomTrack"
+                        style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 22; -fx-font-weight: bold;
+                       -fx-background-radius: 50; -fx-pref-width: 160; -fx-pref-height: 60;"/>
+
+                <Button text="Следующий" onAction="#playNext"
+                        style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-font-size: 16; -fx-padding: 10 20; -fx-background-radius: 30;"/>
+            </HBox>
+
+            <!-- Громкость -->
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label text="Громкость" style="-fx-text-fill: #bdc3c7;"/>
+                <Slider fx:id="volumeSlider" min="0" max="100" value="70" prefWidth="200"/>
+                <Label fx:id="volumeLabel" text="70%" style="-fx-text-fill: #bdc3c7;"/>
+            </HBox>
         </VBox>
 
         <!-- Новое -->

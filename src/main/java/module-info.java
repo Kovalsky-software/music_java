@@ -8,6 +8,7 @@ module org.example.vp_final {
     requires org.kordamp.ikonli.javafx;
     requires org.kordamp.bootstrapfx.core;
     requires jaudiotagger;
+    requires javafx.media;
 
     opens org.example.vp_final to javafx.fxml;
     exports org.example.vp_final;
