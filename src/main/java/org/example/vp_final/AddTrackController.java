@@ -8,6 +8,7 @@ import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
+import java.io.IOException;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -31,6 +32,13 @@ public class AddTrackController {
     private void initialize() {
         loadArtists();
         loadGenres();
+
+        artistComboBox.setEditable(true);
+        genreComboBox.setEditable(true);
+
+        // Опционально: подсказка, если поле пустое
+        artistComboBox.getEditor().setPromptText("Введите или выберите");
+        genreComboBox.getEditor().setPromptText("Введите или выберите");
     }
 
     private void loadArtists() {
@@ -59,31 +67,61 @@ public class AddTrackController {
     private void chooseFile() {
         FileChooser fc = new FileChooser();
         fc.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Аудиофайлы", "*.mp3", "*.wav", "*.flac"),
+                new FileChooser.ExtensionFilter("Аудиофайлы", "*.mp3", "*.wav", "*.flac", "*.ogg"),
                 new FileChooser.ExtensionFilter("Все файлы", "*.*")
         );
         selectedFile = fc.showOpenDialog(null);
 
         if (selectedFile != null) {
             filePathLabel.setText(selectedFile.getName());
+
             try {
                 AudioFile audioFile = AudioFileIO.read(selectedFile);
                 int duration = audioFile.getAudioHeader().getTrackLength();
                 durationLabel.setText(String.format("%d:%02d", duration / 60, duration % 60));
 
-                // Автозаполнение метаданными
-                Tag tag = audioFile.getTag();
-                if (tag != null) {
-                    if (titleField.getText().isEmpty()) {
-                        titleField.setText(tag.getFirst(FieldKey.TITLE));
+                Tag tag = audioFile.getTagOrCreateAndSetDefault();
+                if (tag != null && !tag.isEmpty()) {
+                    // Название
+                    String titleFromTag = tag.getFirst(FieldKey.TITLE);
+                    if (titleFromTag != null && !titleFromTag.isBlank() && titleField.getText().isEmpty()) {
+                        titleField.setText(titleFromTag.trim());
                     }
-                    String artist = tag.getFirst(FieldKey.ARTIST);
-                    if (artist != null && !artistComboBox.getItems().contains(artist)) {
-                        artistComboBox.setValue(artist);
+
+                    // Исполнитель — САМОЕ ГЛАВНОЕ!
+                    String artistFromTag = tag.getFirst(FieldKey.ARTIST);
+                    if (artistFromTag != null && !artistFromTag.isBlank()) {
+                        artistFromTag = artistFromTag.trim();
+
+                        // Если такой исполнитель уже есть в списке — выбираем его
+                        if (artistComboBox.getItems().contains(artistFromTag)) {
+                            artistComboBox.setValue(artistFromTag);
+                        } else {
+                            // Если нет — добавляем в список и выбираем
+                            artistComboBox.getItems().add(artistFromTag);
+                            artistComboBox.setValue(artistFromTag);
+                        }
+                    }
+
+                    // Альбом
+                    String albumFromTag = tag.getFirst(FieldKey.ALBUM);
+                    if (albumFromTag != null && !albumFromTag.isBlank()) {
+                        albumField.setText(albumFromTag.trim());
+                    }
+
+                    // Жанр
+                    String genreFromTag = tag.getFirst(FieldKey.GENRE);
+                    if (genreFromTag != null && !genreFromTag.isBlank()) {
+                        genreFromTag = genreFromTag.trim().replaceAll("\\(\\d+\\)", "").trim(); // убираем (12)
+                        if (!genreComboBox.getItems().contains(genreFromTag)) {
+                            genreComboBox.getItems().add(genreFromTag);
+                        }
+                        genreComboBox.setValue(genreFromTag);
                     }
                 }
             } catch (Exception e) {
-                durationLabel.setText("Не удалось прочитать");
+                durationLabel.setText("Ошибка чтения тегов");
+                e.printStackTrace();
             }
         }
     }
@@ -100,10 +138,17 @@ public class AddTrackController {
         String album = albumField.getText().trim();
         String genreName = genreComboBox.getValue();
 
-        if (title.isEmpty() || artistName == null || genreName == null) {
-            statusLabel.setText("Заполните все обязательные поля!");
+        if (artistName == null || artistName.trim().isEmpty()) {
+            statusLabel.setText("Укажите исполнителя!");
             return;
         }
+        if (genreName == null || genreName.trim().isEmpty()) {
+            statusLabel.setText("Укажите жанр!");
+            return;
+        }
+
+        artistName = artistName.trim();
+        genreName = genreName.trim();
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db")) {
             conn.setAutoCommit(false);
@@ -117,20 +162,35 @@ public class AddTrackController {
             // 3. Получаем или создаём жанр
             int genreId = getOrCreateGenre(conn, genreName);
 
-            // 4. Копируем файл
             String fileName = System.currentTimeMillis() + "_" + selectedFile.getName();
-            Path dest = Path.of("tracks", fileName);
-            Files.createDirectories(dest.getParent());
-            Files.copy(selectedFile.toPath(), dest, StandardCopyOption.REPLACE_EXISTING);
+            String dbPath;  // ← Объявляем здесь!
 
-            // 5. Добавляем трек
+            try {
+                Path tracksDir = Path.of("tracks");
+                if (!Files.exists(tracksDir)) {
+                    Files.createDirectory(tracksDir);
+                }
+
+                Path dest = tracksDir.resolve(fileName);
+                Files.copy(selectedFile.toPath(), dest, StandardCopyOption.REPLACE_EXISTING);
+
+                dbPath = "tracks/" + fileName;  // ← Присваиваем здесь
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                statusLabel.setText("Ошибка копирования файла!");
+                try { conn.rollback(); } catch (Exception ex) { ex.printStackTrace(); }
+                return;
+            }
+
+            // 5. Добавляем трек в БД
             String sql = "INSERT INTO Track (Title, ArtistID, AlbumID, Duration, TrackURL, GenreID) VALUES (?, ?, ?, ?, ?, ?)";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, title);
                 ps.setInt(2, artistId);
                 ps.setObject(3, albumId);
                 ps.setInt(4, getDurationSeconds(selectedFile));
-                ps.setString(5, "tracks/" + fileName);
+                ps.setString(5, dbPath);     // ← Теперь видит!
                 ps.setInt(6, genreId);
                 ps.executeUpdate();
             }
@@ -151,20 +211,35 @@ public class AddTrackController {
         return af.getAudioHeader().getTrackLength();
     }
 
-    private int getOrCreateArtist(Connection c, String name) throws SQLException {
-        String sql = "SELECT ArtistID FROM Artist WHERE LOWER(Name) = LOWER(?)";
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+    private int getOrCreateArtist(Connection conn, String name) throws SQLException {
+        name = name.trim();
+        if (name.isEmpty()) name = "Неизвестный исполнитель";
+
+        // 1. Ищем существующего
+        String selectSql = "SELECT ArtistID FROM Artist WHERE LOWER(Name) = LOWER(?)";
+        try (PreparedStatement ps = conn.prepareStatement(selectSql)) {
             ps.setString(1, name);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt(1);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("ArtistID");  // ← Нашли — возвращаем
+                }
+            }
         }
-        try (PreparedStatement ps = c.prepareStatement("INSERT INTO Artist (Name, Genre) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS)) {
+
+        // 2. Если не нашли — создаём нового
+        String insertSql = "INSERT INTO Artist (Name, Genre) VALUES (?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, name);
             ps.setString(2, "Unknown");
             ps.executeUpdate();
-            ResultSet rs = ps.getGeneratedKeys();
-            rs.next();
-            return rs.getInt(1);
+
+            try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    return generatedKeys.getInt(1);  // ← ВОЗВРАЩАЕМ НОВЫЙ ID!
+                } else {
+                    throw new SQLException("Создание исполнителя не вернуло ID");
+                }
+            }
         }
     }
 
@@ -186,19 +261,26 @@ public class AddTrackController {
         }
     }
 
-    private int getOrCreateGenre(Connection c, String name) throws SQLException {
-        String sql = "SELECT GenreID FROM Genre WHERE LOWER(Name) = LOWER(?)";
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+    private int getOrCreateGenre(Connection conn, String name) throws SQLException {
+        name = name.trim();
+        if (name.isEmpty()) name = "Unknown";
+
+        String selectSql = "SELECT GenreID FROM Genre WHERE LOWER(Name) = LOWER(?)";
+        try (PreparedStatement ps = conn.prepareStatement(selectSql)) {
             ps.setString(1, name);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt(1);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("GenreID");
+            }
         }
-        try (PreparedStatement ps = c.prepareStatement("INSERT INTO Genre (Name) VALUES (?)", Statement.RETURN_GENERATED_KEYS)) {
+
+        String insertSql = "INSERT INTO Genre (Name) VALUES (?)";
+        try (PreparedStatement ps = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, name);
             ps.executeUpdate();
-            ResultSet rs = ps.getGeneratedKeys();
-            rs.next();
-            return rs.getInt(1);
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) return keys.getInt(1);
+                else throw new SQLException("Не удалось создать жанр");
+            }
         }
     }
 

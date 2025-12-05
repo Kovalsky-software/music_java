@@ -11,8 +11,8 @@
 
     <GridPane hgap="15" vgap="12">
         <columnConstraints>
-            <ColumnConstraints hgrow="PRIORITY"/>
-            <ColumnConstraints hgrow="PRIORITY"/>
+            <ColumnConstraints hgrow="ALWAYS"/>
+            <ColumnConstraints hgrow="ALWAYS"/>
         </columnConstraints>
 
         <Label text="Название трека:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
