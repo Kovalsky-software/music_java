@@ -178,6 +178,7 @@ public class DatabaseHelper {
 
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement()) {
+            stmt.execute("PRAGMA foreign_keys = ON;");
 
             for (String sql : sqlTables) {
                 stmt.execute(sql);
