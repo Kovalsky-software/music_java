@@ -48,7 +48,7 @@ public class DatabaseHelper {
                     Title TEXT NOT NULL,
                     Date TEXT NOT NULL,
                     Location TEXT,
-                    ArtistGenre TEXT
+                    ArtistGenre TEXT,
                     Description TEXT
                 );
                 """,
@@ -133,10 +133,12 @@ public class DatabaseHelper {
 
                 """
                 CREATE TABLE IF NOT EXISTS UserLikePlaylist(
-                id primariy key,
-                PlaylistID integer,
-                UserID integer
-                )
+                                PlaylistID INTEGER,
+                                UserID INTEGER,
+                                PRIMARY KEY (PlaylistID, UserID), /* <-- ИСПРАВЛЕНИЕ: Установка составного ключа */
+                                FOREIGN KEY (PlaylistID) REFERENCES Playlist(PlaylistID) ON DELETE CASCADE,
+                                FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE
+                                )
                 """,
 
                 // Платежи
@@ -258,6 +260,37 @@ public class DatabaseHelper {
             pstmt.executeUpdate();
         } catch (SQLException e) {
             System.err.println("Ошибка сохранения настройки: " + key);
+        }
+    }
+
+    public static boolean isTrackLiked(int userId, int trackId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM UserLike WHERE UserID = ? AND TrackID = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, trackId);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next() && rs.getInt(1) > 0;
+        }
+    }
+
+    public static void addToFavorites(int userId, int trackId) throws SQLException {
+        String sql = "INSERT INTO UserLike (UserID, TrackID) VALUES (?, ?)";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, trackId);
+            pstmt.executeUpdate();
+        }
+    }
+
+    public static void removeFromFavorites(int userId, int trackId) throws SQLException {
+        String sql = "DELETE FROM UserLike WHERE UserID = ? AND TrackID = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, trackId);
+            pstmt.executeUpdate();
         }
     }
 

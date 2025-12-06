@@ -7,6 +7,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import java.io.File;
+import java.nio.file.Paths;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -38,11 +39,16 @@ public class HomeController implements Initializable {
     @FXML private Label currentTrackLabel;
     @FXML private Slider volumeSlider;
     @FXML private Label volumeLabel;
+    @FXML private Button playerLikeButton;
 
     private MediaPlayer mediaPlayer;
     private List<File> trackFiles = new ArrayList<>();
     private int currentTrackIndex = -1;
+    private int currentPlayingTrackId = -1;
     private Random random = new Random();
+
+    // --- ГЛАВНОЕ ИЗМЕНЕНИЕ: Маппинг имени файла на TrackID из БД ---
+    private Map<String, Integer> fileToTrackIdMap = new HashMap<>();
 
     // Хранилище данных
     private List<AfishaEvent> afishaEvents = new ArrayList<>();
@@ -59,30 +65,54 @@ public class HomeController implements Initializable {
         // Перезагрузка контента при смене пользователя
         loadUserPlaylists();
         loadAfisha();
-        // ВАЖНО: нужно вызвать эти методы после установки currentUser
         loadFavoriteTracksSection();
         loadFavoritePlaylistsSection();
+        updatePlayerLikeButtonState();
     }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         loadLatestTracks();
         setupAfishaSorting();
-        loadTrackFiles();
+        loadTrackFiles(); // --- ОБНОВЛЕН
         setupVolumeControl();
-
-        // УДАЛЕНО: Вызов здесь, потому что он должен выполняться только после установки currentUser в setUser.
-        // Если пользователь не вошел, эти контейнеры будут пустыми, что нормально.
-        // loadFavoriteTracksSection();
-        // loadFavoritePlaylistsSection();
+        setupPlayerLikeButton();
     }
 
+    // --- ОБНОВЛЕННЫЙ МЕТОД: Загрузка файлов и маппинга из БД ---
     private void loadTrackFiles() {
         Path tracksDir = Path.of("tracks");
+        fileToTrackIdMap.clear();
+        trackFiles.clear();
+
+        // 1. Загрузка маппинга TrackURL -> TrackID из БД
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT TrackID, TrackURL FROM Track")) {
+            while (rs.next()) {
+                int id = rs.getInt("TrackID");
+                String url = rs.getString("TrackURL");
+                if (url != null && !url.isEmpty()) {
+                    // 🔥 ИСПРАВЛЕНИЕ: Извлекаем ТОЛЬКО имя файла из полного пути
+                    // "tracks/1764914054484_Lyudvig_van_Betkhoven_-_Lunnaya_sonata_48113982.mp3"
+                    // -> "1764914054484_Lyudvig_van_Betkhoven_-_Lunnaya_sonata_48113982.mp3"
+                    String fileName = Paths.get(url).getFileName().toString();
+                    fileToTrackIdMap.put(fileName, id);
+
+                    System.out.println("DEBUG: Маппинг загружен - '" + fileName + "' -> ID: " + id);
+                }
+            }
+            System.out.println("ОТЛАДКА: Загружен маппинг " + fileToTrackIdMap.size() + " треков из БД.");
+        } catch (SQLException e) {
+            System.err.println("Ошибка загрузки URL треков из БД: " + e.getMessage());
+        }
+
+        // 2. Загрузка реальных файлов из папки
         if (Files.exists(tracksDir) && Files.isDirectory(tracksDir)) {
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(tracksDir, "*.{mp3,wav,flac,ogg,m4a}")) {
                 for (Path path : stream) {
                     trackFiles.add(path.toFile());
+                    System.out.println("DEBUG: Файл найден - " + path.getFileName());
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -93,9 +123,8 @@ public class HomeController implements Initializable {
             currentTrackLabel.setText("Нет треков в папке tracks/");
             playButton.setDisable(true);
         } else {
-            // ИСПРАВЛЕНИЕ: если треки есть, кнопка должна быть активна
             playButton.setDisable(false);
-            stopCurrentTrackAndReset(); // Устанавливаем начальный текст и действие кнопки
+            stopCurrentTrackAndReset();
         }
     }
 
@@ -107,18 +136,103 @@ public class HomeController implements Initializable {
             }
             volumeLabel.setText(String.format("%.0f%%", newVal.doubleValue()));
         });
-        // ИСПРАВЛЕНИЕ: Устанавливаем начальное значение громкости для mediaPlayer, если он уже существует
         if (mediaPlayer != null) {
             mediaPlayer.setVolume(volumeSlider.getValue() / 100.0);
         }
         volumeLabel.setText(String.format("%.0f%%", volumeSlider.getValue()));
     }
 
+    // --- МЕТОД: Настройка кнопки лайка плеера (без изменений) ---
+    private void setupPlayerLikeButton() {
+        if (playerLikeButton != null) {
+            playerLikeButton.setStyle("-fx-background-color: transparent;");
+            playerLikeButton.setPrefSize(32, 32);
+            updatePlayerLikeButtonState();
+
+            playerLikeButton.setOnAction(e -> {
+                if (currentUser == null) {
+                    showAlert("Войдите в аккаунт, чтобы добавлять в избранное!");
+                    return;
+                }
+                if (currentPlayingTrackId == -1) {
+                    showAlert("Сначала начните воспроизведение трека.");
+                    return;
+                }
+
+                try {
+                    if (DatabaseHelper.isTrackLiked(currentUser.userId(), currentPlayingTrackId)) {
+                        DatabaseHelper.removeFromFavorites(currentUser.userId(), currentPlayingTrackId);
+                    } else {
+                        DatabaseHelper.addToFavorites(currentUser.userId(), currentPlayingTrackId);
+                    }
+                    updatePlayerLikeButtonState();
+                    loadFavoriteTracksSection();
+                } catch (SQLException ex) {
+                    showAlert("Ошибка при работе с избранным: " + ex.getMessage());
+                }
+            });
+        }
+    }
+
+    // --- МЕТОД: Обновление состояния кнопки лайка плеера (без изменений) ---
+    private void updatePlayerLikeButtonState() {
+        if (playerLikeButton == null || currentUser == null) {
+            if (playerLikeButton != null) {
+                updateLikeButton(playerLikeButton, false);
+                playerLikeButton.setDisable(true);
+            }
+            return;
+        }
+
+        boolean isLiked = false;
+        boolean isPlayable = currentPlayingTrackId != -1;
+
+        if (isPlayable) {
+            isLiked = isTrackLiked(currentPlayingTrackId);
+        }
+
+        updateLikeButton(playerLikeButton, isLiked);
+        playerLikeButton.setDisable(!isPlayable);
+    }
+
+
+    // --- НОВЫЙ/ОБНОВЛЕННЫЙ МЕТОД: Получение ID для файла (ПРИОРИТЕТ - БД) ---
+    private int getTrackIdForFile(File file) {
+        String fileName = file.getName();
+
+        // 1. ПРИОРИТЕТ: Поиск ID по имени файла в мапе (используя TrackURL из БД)
+        if (fileToTrackIdMap.containsKey(fileName)) {
+            int dbTrackId = fileToTrackIdMap.get(fileName);
+            System.out.println("--- ПЛЕЕР --- Трек ID для лайка: " + dbTrackId + " (Источник ID: База Данных/TrackURL)");
+            return dbTrackId;
+        }
+
+        // 2. ЗАПАСНОЙ ВАРИАНТ: Парсинг имени файла (если нет в БД)
+        int trackId = -1;
+        try {
+            int idEnd = fileName.indexOf('_');
+
+            if (idEnd > 0) {
+                String idString = fileName.substring(0, idEnd);
+                trackId = Integer.parseInt(idString);
+            }
+        } catch (NumberFormatException e) {
+            // Игнорируем ошибку парсинга
+        }
+
+        if (trackId != -1) {
+            System.out.println("--- ПЛЕЕР --- Трек ID для лайка: " + trackId + " (Источник ID: Парсинг Имени/Запасной вариант)");
+        } else {
+            System.out.println("--- ПЛЕЕР --- Трек ID для лайка: -1 (Источник ID: Ошибка Файла - не найден в БД и не соответствует формату)");
+        }
+
+        return trackId;
+    }
+
     @FXML
     private void playRandomTrack() {
         if (trackFiles.isEmpty()) return;
 
-        // ИСПРАВЛЕНИЕ: Проверяем, не играет ли уже что-то. Если да, останавливаем.
         if (mediaPlayer != null && mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) {
             stopCurrentTrackAndReset();
             return;
@@ -126,15 +240,24 @@ public class HomeController implements Initializable {
 
         stopCurrentTrack();
         currentTrackIndex = random.nextInt(trackFiles.size());
-        playTrack(trackFiles.get(currentTrackIndex));
+        File trackFile = trackFiles.get(currentTrackIndex);
+
+        int trackId = getTrackIdForFile(trackFile); // <--- Используем новый метод
+
+        playTrack(trackFile, trackId);
         playButton.setText("Стоп");
-        // ИСПРАВЛЕНИЕ: При нажатии "Стоп" нужно остановить и сбросить состояние
         playButton.setOnAction(e -> stopCurrentTrackAndReset());
     }
 
-    private void playTrack(File file) {
-        // ИСПРАВЛЕНИЕ: Если трек уже играет (например, при вызове playNext/playPrevious), сначала останавливаем.
+    private void playTrack(File file, int trackId) {
         stopCurrentTrack();
+
+        currentPlayingTrackId = trackId;
+
+        // Логирование теперь происходит внутри getTrackIdForFile() и playTrackById()
+        if (trackId == -1) {
+            System.out.println("--- ПЛЕЕР --- Трек ID для лайка: -1 (Лайк недоступен)");
+        }
 
         currentTrackLabel.setText("Играет: " + file.getName().replaceAll("^\\d+_", "").replace("_", " "));
 
@@ -145,9 +268,14 @@ public class HomeController implements Initializable {
         mediaPlayer.setOnEndOfMedia(this::playNext);
         mediaPlayer.play();
 
-        // Убедимся, что кнопка переключена на "Стоп"
-        playButton.setText("Стоп");
-        playButton.setOnAction(e -> stopCurrentTrackAndReset());
+        updatePlayerLikeButtonState();
+    }
+
+    // Этот метод теперь используется только как вспомогательный,
+    // он будет использовать логику getTrackIdForFile, если вызывается
+    private void playTrack(File file) {
+        int trackId = getTrackIdForFile(file);
+        playTrack(file, trackId);
     }
 
     private void stopCurrentTrack() {
@@ -155,41 +283,97 @@ public class HomeController implements Initializable {
             mediaPlayer.stop();
             mediaPlayer.dispose();
             mediaPlayer = null;
-            // ИСПРАВЛЕНИЕ: Не сбрасываем здесь текст и действие, так как этот метод
-            // используется как вспомогательный для перехода к следующему треку.
         }
     }
 
     private void stopCurrentTrackAndReset() {
         stopCurrentTrack();
+
+        currentPlayingTrackId = -1;
+
         currentTrackLabel.setText("Нажмите ЗАПУСТИТЬ");
         playButton.setText("ЗАПУСТИТЬ");
         playButton.setOnAction(e -> playRandomTrack());
-        currentTrackIndex = -1; // Сброс индекса текущего трека
+
+        updatePlayerLikeButtonState();
     }
 
     @FXML
     private void playPrevious() {
         if (trackFiles.isEmpty()) return;
-        // ИСПРАВЛЕНИЕ: Если ничего не играло, начинаем с последнего трека
+        stopCurrentTrack();
+
         if (currentTrackIndex == -1) {
             currentTrackIndex = trackFiles.size() - 1;
         } else {
             currentTrackIndex = (currentTrackIndex - 1 + trackFiles.size()) % trackFiles.size();
         }
-        playTrack(trackFiles.get(currentTrackIndex));
+
+        File trackFile = trackFiles.get(currentTrackIndex);
+        playTrack(trackFile, getTrackIdForFile(trackFile)); // <--- Используем новый метод
     }
 
     @FXML
     private void playNext() {
         if (trackFiles.isEmpty()) return;
-        // ИСПРАВЛЕНИЕ: Если ничего не играло, начинаем с первого трека
+        stopCurrentTrack();
+
         if (currentTrackIndex == -1) {
             currentTrackIndex = 0;
         } else {
             currentTrackIndex = (currentTrackIndex + 1) % trackFiles.size();
         }
-        playTrack(trackFiles.get(currentTrackIndex));
+
+        File trackFile = trackFiles.get(currentTrackIndex);
+        playTrack(trackFile, getTrackIdForFile(trackFile)); // <--- Используем новый метод
+    }
+
+    // --- ОБНОВЛЕННЫЙ МЕТОД: playTrackById ---
+    // --- ИСПРАВЛЕННЫЙ МЕТОД: playTrackById ---
+    private void playTrackById(int trackId) {
+        String trackURL = null;
+
+        // 1. Находим TrackURL по TrackID из БД
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
+             PreparedStatement pstmt = conn.prepareStatement("SELECT TrackURL FROM Track WHERE TrackID = ?")) {
+            pstmt.setInt(1, trackId);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                trackURL = rs.getString("TrackURL");
+            }
+        } catch (SQLException e) {
+            System.err.println("Ошибка поиска TrackURL для ID:" + trackId + " в БД.");
+        }
+
+        File fileToPlay = null;
+
+        // 2. Ищем файл по TrackURL (предполагаем, что TrackURL == file.getName())
+        if (trackURL != null) {
+            // 🔥 ИСПРАВЛЕНИЕ: Создаем final или effectively final копию переменной.
+            final String finalTrackURL = trackURL;
+
+            fileToPlay = trackFiles.stream()
+                    .filter(f -> f.getName().equals(finalTrackURL)) // Используем finalTrackURL
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        // 3. Запасной вариант (если файл не найден по точному URL, ищем по старому формату ID_)
+        if (fileToPlay == null) {
+            fileToPlay = trackFiles.stream()
+                    .filter(f -> f.getName().startsWith(trackId + "_"))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        if (fileToPlay != null) {
+            currentTrackIndex = trackFiles.indexOf(fileToPlay);
+            System.out.println("--- ПЛЕЕР --- Трек ID для лайка: " + trackId + " (Источник ID: Карточка/База Данных)");
+            // Используем TrackID, полученный из карточки, который точно корректен
+            playTrack(fileToPlay, trackId);
+        } else {
+            showAlert("Ошибка: Файл трека (ID:" + trackId + ") не найден в папке tracks/. Проверьте TrackURL в БД.");
+        }
     }
 
     private void loadLatestTracks() {
@@ -238,12 +422,10 @@ public class HomeController implements Initializable {
     }
 
     private void showPlaceholder(FlowPane container, String text) {
-        // ИСПРАВЛЕНИЕ: Сначала очищаем контейнер
         container.getChildren().clear();
         Label placeholder = new Label(text);
         placeholder.setStyle("-fx-font-size: 18; -fx-text-fill: #95a5a6; -fx-padding: 40 0 0 0;");
         placeholder.setWrapText(true);
-        // ИСПРАВЛЕНИЕ: Добавляем плейсхолдер
         container.getChildren().add(placeholder);
     }
 
@@ -287,9 +469,6 @@ public class HomeController implements Initializable {
         Comparator<AfishaEvent> comparator = switch (column) {
             case "Название" -> Comparator.comparing(AfishaEvent::title);
             case "Место" -> Comparator.comparing(AfishaEvent::location);
-            // ИСПРАВЛЕНИЕ: Для корректной сортировки по дате нужно использовать более сложный компаратор,
-            // если поле `date` — это строка, или изменить его на `java.sql.Date`/`java.time.LocalDate`.
-            // Для простоты оставим сравнение строк, но отметим это как потенциальное место ошибки.
             case "Дата" -> Comparator.comparing(AfishaEvent::date);
             default -> Comparator.comparing(AfishaEvent::afishaId);
         };
@@ -317,55 +496,20 @@ public class HomeController implements Initializable {
         Label loc = new Label("Где: " + event.location());
         loc.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13;");
 
-        title.setWrapText(true); // + ДОБАВЛЕНО: для длинных названий
-        loc.setWrapText(true);   // + ДОБАВЛЕНО: для длинных локаций
+        title.setWrapText(true);
+        loc.setWrapText(true);
 
         card.getChildren().addAll(title, date, loc);
         return card;
     }
 
-    // Вспомогательные методы для лайков/избранного (отсутствовали, добавлены)
-
     private boolean isTrackLiked(int trackId) {
         if (currentUser == null) return false;
-        String sql = "SELECT COUNT(*) FROM UserLike WHERE UserID = ? AND TrackID = ?";
-        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, currentUser.userId());
-            pstmt.setInt(2, trackId);
-            ResultSet rs = pstmt.executeQuery();
-            return rs.next() && rs.getInt(1) > 0;
+        try {
+            return DatabaseHelper.isTrackLiked(currentUser.userId(), trackId); //
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
-        }
-    }
-
-    private void addToFavorites(int trackId) {
-        String sql = "INSERT INTO UserLike (UserID, TrackID) VALUES (?, ?)";
-        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, currentUser.userId());
-            pstmt.setInt(2, trackId);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            // ВАЖНО: Может произойти ошибка, если запись уже существует (нарушение UNIQUE-констрейнта)
-            // ИСПРАВЛЕНИЕ: Отображение ошибки пользователю
-            showAlert("Ошибка: Не удалось добавить трек в избранное.");
-        }
-    }
-
-    private void removeFromFavorites(int trackId) {
-        String sql = "DELETE FROM UserLike WHERE UserID = ? AND TrackID = ?";
-        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, currentUser.userId());
-            pstmt.setInt(2, trackId);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert("Ошибка: Не удалось удалить трек из избранного.");
         }
     }
 
@@ -376,12 +520,17 @@ public class HomeController implements Initializable {
         try {
             Image image = new Image(getClass().getResourceAsStream(iconPath));
             ImageView imageView = new ImageView(image);
-            imageView.setFitWidth(24); // Установим размер иконки
+            imageView.setFitWidth(24);
             imageView.setFitHeight(24);
             likeButton.setGraphic(imageView);
-        } catch (NullPointerException e) {
-            System.err.println("Ошибка загрузки иконки: " + iconPath);
-            likeButton.setText(isLiked ? "♥" : "♡"); // Запасной вариант
+            likeButton.setText(null);
+        } catch (Exception e) {
+            System.err.println("Ошибка загрузки иконки: " + iconPath + ". Используется текстовый запасной вариант.");
+            likeButton.setGraphic(null);
+            likeButton.setText(isLiked ? "♥" : "♡");
+            likeButton.setStyle("-fx-background-color: transparent; -fx-text-fill: "
+                    + (isLiked ? "red" : "white")
+                    + "; -fx-font-size: 18px;");
         }
     }
 
@@ -393,58 +542,8 @@ public class HomeController implements Initializable {
         alert.showAndWait();
     }
 
-    private void playTrackById(int trackId) {
-        // ИСПРАВЛЕНИЕ: Находим файл трека по TrackID в базе, а затем в файловой системе.
-        // Для простоты в этом примере, если `trackFiles` уже загружен, можем найти его там,
-        // но это требует маппинга TrackID <-> File.name.
-        // Предполагаем, что имя файла содержит ID, например "123_TrackName.mp3".
-
-        // Если `trackFiles` не имеет маппинга, нужно найти путь к файлу по TrackID в БД.
-        String trackFileName = getTrackFileNameById(trackId);
-        if (trackFileName == null) {
-            showAlert("Ошибка: Не удалось найти файл трека.");
-            return;
-        }
-
-        File fileToPlay = trackFiles.stream()
-                .filter(f -> f.getName().contains(trackFileName)) // Упрощенный поиск
-                .findFirst()
-                .orElse(null);
-
-        if (fileToPlay != null) {
-            currentTrackIndex = trackFiles.indexOf(fileToPlay);
-            playTrack(fileToPlay);
-        } else {
-            showAlert("Ошибка: Файл трека не найден в папке tracks/.");
-        }
-    }
-
-    private String getTrackFileNameById(int trackId) {
-        // ВАЖНО: Этот метод предполагает, что в таблице Track есть колонка `FileName`
-        // или что имя файла может быть восстановлено по Title или ID.
-        // Если база данных не содержит имени файла, это место, где возникнет проблема.
-        // Для этого исправления предполагаем, что `Title` достаточно, или нужно добавить поле в БД.
-        // Если имя файла — это, например, `TrackID_Title.mp3`:
-        String sql = "SELECT Title FROM Track WHERE TrackID = ?";
-        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db");
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, trackId);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                String title = rs.getString("Title");
-                // Упрощенное предположение: ищем файл, содержащий ID и название.
-                return String.valueOf(trackId); // Ищем файл, содержащий ID
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-
     private void loadFavoriteTracksSection() {
         if (currentUser == null || favoriteContentContainer == null) {
-            // ИСПРАВЛЕНИЕ: Если пользователя нет, показываем заглушку
             if (favoriteContentContainer != null) {
                 showPlaceholder(favoriteContentContainer, "Войдите, чтобы увидеть избранные треки.");
             }
@@ -471,7 +570,6 @@ public class HomeController implements Initializable {
             boolean has = false;
             while (rs.next()) {
                 has = true;
-                // ИСПРАВЛЕНИЕ: Важно передать правильные данные
                 VBox card = createTrackCard(
                         rs.getInt("TrackID"),
                         rs.getString("Title"),
@@ -490,12 +588,8 @@ public class HomeController implements Initializable {
         }
     }
 
-    // УДАЛЕНО: Дублирующий метод loadFavoriteTracks() был удален,
-    // так как loadFavoriteTracksSection() выполняет ту же логику.
-
     private void loadFavoritePlaylistsSection() {
         if (currentUser == null || favoritePlaylistsContainer == null) {
-            // ИСПРАВЛЕНИЕ: Если пользователя нет, показываем заглушку
             if (favoritePlaylistsContainer != null) {
                 showPlaceholder(favoritePlaylistsContainer, "Войдите, чтобы увидеть избранные плейлисты.");
             }
@@ -554,7 +648,7 @@ public class HomeController implements Initializable {
         Label o = new Label("от " + (owner != null ? owner : "Аноним"));
         o.setStyle("-fx-text-fill: #fadbd8; -fx-font-size: 13;");
 
-        Label d = new Label(date != null && date.length() >= 10 ? date.substring(0, 10) : ""); // + ИСПРАВЛЕНИЕ: Проверка длины строки
+        Label d = new Label(date != null && date.length() >= 10 ? date.substring(0, 10) : "");
         d.setStyle("-fx-text-fill: #fadbd8; -fx-font-size: 11;");
 
         card.getChildren().addAll(t, o, d);
@@ -570,58 +664,50 @@ public class HomeController implements Initializable {
 
         Label titleLabel = new Label(title);
         titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 15; -fx-text-fill: #2c3e50;");
-        titleLabel.setWrapText(true); // + ДОБАВЛЕНО: Для длинных названий треков
 
         Label artistLabel = new Label(artist);
         artistLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13;");
 
-        // Кнопка "В избранное"
         Button likeButton = new Button();
-        likeButton.setStyle("-fx-background-color: transparent;");
-        // ИСПРАВЛЕНИЕ: Убираем изначальную загрузку иконки, она будет в updateLikeButton
-        // likeButton.setGraphic(new ImageView(new Image(
-        //         getClass().getResourceAsStream("/org/example/vp_final/icons/heart-empty.png")
-        // )));
+        likeButton.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
         likeButton.setPrefSize(32, 32);
 
-        // Проверяем, уже в избранном ли трек
-        boolean isLiked = isTrackLiked(trackId);
-        // ИСПРАВЛЕНИЕ: Присваиваем boolean переменной, чтобы использовать ее в обработчике
-        final boolean[] isLikedRef = new boolean[]{isLiked};
+        boolean initialLikedState = currentUser != null && isTrackLiked(trackId);
+        updateLikeButton(likeButton, initialLikedState);
 
-        updateLikeButton(likeButton, isLikedRef[0]);
-
-        // Обработчик клика
         likeButton.setOnAction(e -> {
             if (currentUser == null) {
                 showAlert("Войдите в аккаунт, чтобы добавлять в избранное!");
                 return;
             }
-            if (isLikedRef[0]) {
-                removeFromFavorites(trackId);
-            } else {
-                addToFavorites(trackId);
+
+            boolean isCurrentlyLiked = isTrackLiked(trackId);
+
+            try {
+                if (isCurrentlyLiked) {
+                    DatabaseHelper.removeFromFavorites(currentUser.userId(), trackId); //
+                } else {
+                    DatabaseHelper.addToFavorites(currentUser.userId(), trackId); //
+                }
+            } catch (SQLException ex) {
+                showAlert("Ошибка при работе с избранным: " + ex.getMessage());
             }
-            isLikedRef[0] = !isLikedRef[0];
-            updateLikeButton(likeButton, isLikedRef[0]);
-            // Обновляем раздел "Любимое"
+
+            updateLikeButton(likeButton, !isCurrentlyLiked);
             loadFavoriteTracksSection();
+            if (currentPlayingTrackId == trackId) {
+                updatePlayerLikeButtonState();
+            }
+
+            e.consume();
         });
 
-        // Клик по карточке — воспроизведение
         card.setOnMouseClicked(e -> {
-            // ИСПРАВЛЕНИЕ: Проверяем, что цель клика не является likeButton
+            // Проверяем, что цель клика не является likeButton или его дочерним элементом
             if (e.getTarget() instanceof Button || e.getTarget() instanceof ImageView) {
-                // Если клик был по кнопке или иконке внутри кнопки, игнорируем
                 return;
             }
-            // Дополнительная проверка, чтобы убедиться, что мы не кликнули на элементы внутри HBox,
-            // если они не были самой карточкой, но это сложнее. Лучше использовать `consume()`.
-
-            if (e.getTarget() != likeButton && !likeButton.getChildrenUnmodifiable().contains(e.getTarget())) {
-                playTrackById(trackId);
-                e.consume(); // Предотвращаем дальнейшее всплытие события
-            }
+            playTrackById(trackId);
         });
 
         HBox bottom = new HBox(10, artistLabel, new Region(), likeButton);
@@ -634,7 +720,6 @@ public class HomeController implements Initializable {
 
     private void loadUserPlaylists() {
         if (currentUser == null || userPlaylistsContainer == null) {
-            // ИСПРАВЛЕНИЕ: Если пользователя нет, показываем заглушку
             if (userPlaylistsContainer != null) {
                 showPlaceholder(userPlaylistsContainer, "Войдите, чтобы увидеть свои плейлисты.");
             }
@@ -675,16 +760,16 @@ public class HomeController implements Initializable {
 
         Label t = new Label(title);
         t.setStyle("-fx-font-weight: bold; -fx-font-size: 15; -fx-text-fill: #2c3e50;");
-        t.setWrapText(true); // + ДОБАВЛЕНО: Для длинных названий плейлистов
+        t.setWrapText(true);
 
-        Label d = new Label("Создан: " + (date != null && date.length() >= 10 ? date.substring(0, 10) : "Недавно")); // + ИСПРАВЛЕНИЕ: Проверка длины
+        Label d = new Label("Создан: " + (date != null && date.length() >= 10 ? date.substring(0, 10) : "Недавно"));
         d.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 12;");
 
         card.getChildren().addAll(t, d);
         return card;
     }
 
-    // Quicksort и вспомогательные методы (оставлены без изменений)
+    // Вспомогательные методы для сортировки (оставлены без изменений)
     private void quicksort(List<AfishaEvent> list, Comparator<AfishaEvent> comparator) {
         quicksort(list, 0, list.size() - 1, comparator);
     }
@@ -764,6 +849,4 @@ public class HomeController implements Initializable {
         }
     }
 
-    // ВАЖНО: Требуется класс User и AfishaEvent, которых нет в файле.
-    // Если они отсутствуют, код не скомпилируется.
 }
