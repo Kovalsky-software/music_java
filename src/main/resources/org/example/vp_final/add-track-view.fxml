@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.vp_final.AddTrackController"
+      spacing="15" alignment="CENTER" style="-fx-background-color: #f8f9fa; -fx-padding: 20;">
+
+    <Label text="Добавить новый трек" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+    <GridPane hgap="15" vgap="12">
+        <columnConstraints>
+            <ColumnConstraints hgrow="ALWAYS"/>
+            <ColumnConstraints hgrow="ALWAYS"/>
+        </columnConstraints>
+
+        <Label text="Название трека:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="titleField" prefWidth="250" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Исполнитель:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="artistComboBox" prefWidth="250" editable="true" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="Альбом (необязательно):" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="albumField" prefWidth="250" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Жанр:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="genreComboBox" prefWidth="250" editable="true" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <Label text="Файл трека:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <HBox spacing="10" GridPane.rowIndex="4" GridPane.columnIndex="1">
+            <Label fx:id="filePathLabel" text="Не выбран" style="-fx-text-fill: #7f8c8d;"/>
+            <Button text="Выбрать файл" onAction="#chooseFile"/>
+        </HBox>
+
+        <Label text="Длительность:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <Label fx:id="durationLabel" text="—" style="-fx-font-weight: bold;" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <Label fx:id="statusLabel" style="-fx-text-fill: #e74c3c;" textAlignment="CENTER"/>
+
+    <HBox spacing="15" alignment="CENTER_RIGHT">
+        <Button text="Отмена" onAction="#closeWindow" style="-fx-background-color: #95a5a6; -fx-text-fill: white;"/>
+        <Button text="Добавить трек" onAction="#addTrack"
+                style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;"/>
+    </HBox>
+</VBox>
