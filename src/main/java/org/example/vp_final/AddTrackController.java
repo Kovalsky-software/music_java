@@ -1,7 +1,12 @@
 package org.example.vp_final;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.jaudiotagger.audio.AudioFile;
@@ -13,9 +18,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.*;
-import java.util.Optional; // Добавлено для Optional
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class AddTrackController {
 
@@ -27,44 +35,282 @@ public class AddTrackController {
     @FXML private Label filePathLabel;
     @FXML private Label durationLabel;
     @FXML private Label statusLabel;
+    @FXML private ToggleButton modeToggle;
+    @FXML private VBox classicMode, tableMode;
+    @FXML private TableView<TrackRow> tracksTable;
+
+    private final ObservableList<TrackRow> tableData = FXCollections.observableArrayList();
+    private boolean isTableMode = false;
 
     // --- Переменные состояния ---
     private File selectedFile;
-    // Константа для пути к БД (удобно для изменения)
     private static final String DB_URL = "jdbc:sqlite:music_app.db";
-    // Константа для директории треков
     private static final String TRACKS_DIR = "tracks";
+
+    // Хранилище для новых файлов (путь -> File)
+    private final Map<String, File> newFiles = new HashMap<>();
 
     // --- Инициализация ---
     @FXML
     private void initialize() {
-        // Устанавливаем начальный статус
         statusLabel.setText("Выберите аудиофайл...");
-
         loadArtists();
         loadGenres();
-
-        // Установка стилей и подсказок
         artistComboBox.setEditable(true);
         genreComboBox.setEditable(true);
         artistComboBox.getEditor().setPromptText("Введите или выберите");
         genreComboBox.getEditor().setPromptText("Введите или выберите");
 
-        // Добавление слушателей для очистки сообщения об ошибке при начале ввода
         titleField.textProperty().addListener((obs, oldV, newV) -> resetStatus());
         artistComboBox.valueProperty().addListener((obs, oldV, newV) -> resetStatus());
         genreComboBox.valueProperty().addListener((obs, oldV, newV) -> resetStatus());
+
+        // --- TableView режим ---
+        initializeTableView();
+        loadAllTracksToTable();
+
+        // Переключение режимов
+        modeToggle.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            isTableMode = newVal;
+            classicMode.setVisible(!isTableMode);
+            classicMode.setManaged(!isTableMode);
+            tableMode.setVisible(isTableMode);
+            tableMode.setManaged(isTableMode);
+            modeToggle.setText(isTableMode ? "Классический режим" : "TableView режим");
+        });
+    }
+
+    private void initializeTableView() {
+        tracksTable.setItems(tableData);
+        tracksTable.setEditable(true);
+
+        // Настройка колонок
+        TableColumn<TrackRow, Integer> idCol = new TableColumn<>("ID");
+        idCol.setPrefWidth(60);
+        idCol.setCellValueFactory(new PropertyValueFactory<>("trackId"));
+
+        TableColumn<TrackRow, String> titleCol = new TableColumn<>("Название");
+        titleCol.setPrefWidth(280);
+        titleCol.setCellValueFactory(new PropertyValueFactory<>("title"));
+        titleCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        titleCol.setEditable(true);
+        titleCol.setOnEditCommit(event -> {
+            event.getRowValue().titleProperty().set(event.getNewValue());
+        });
+
+        TableColumn<TrackRow, String> artistCol = new TableColumn<>("Исполнитель");
+        artistCol.setPrefWidth(200);
+        artistCol.setCellValueFactory(new PropertyValueFactory<>("artist"));
+        artistCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        artistCol.setEditable(true);
+        artistCol.setOnEditCommit(event -> {
+            event.getRowValue().artistProperty().set(event.getNewValue());
+        });
+
+        TableColumn<TrackRow, String> albumCol = new TableColumn<>("Альбом");
+        albumCol.setPrefWidth(180);
+        albumCol.setCellValueFactory(new PropertyValueFactory<>("album"));
+        albumCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        albumCol.setEditable(true);
+        albumCol.setOnEditCommit(event -> {
+            event.getRowValue().albumProperty().set(event.getNewValue());
+        });
+
+        TableColumn<TrackRow, String> genreCol = new TableColumn<>("Жанр");
+        genreCol.setPrefWidth(120);
+        genreCol.setCellValueFactory(new PropertyValueFactory<>("genre"));
+        genreCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        genreCol.setEditable(true);
+        genreCol.setOnEditCommit(event -> {
+            event.getRowValue().genreProperty().set(event.getNewValue());
+        });
+
+        TableColumn<TrackRow, String> durationCol = new TableColumn<>("Длительность");
+        durationCol.setPrefWidth(100);
+        durationCol.setCellValueFactory(new PropertyValueFactory<>("duration"));
+
+        TableColumn<TrackRow, String> fileCol = new TableColumn<>("Файл");
+        fileCol.setPrefWidth(200);
+        fileCol.setCellValueFactory(new PropertyValueFactory<>("fileName"));
+
+        tracksTable.getColumns().addAll(idCol, titleCol, artistCol, albumCol, genreCol, durationCol, fileCol);
+    }
+
+    private void loadAllTracksToTable() {
+        tableData.clear();
+        String sql = """
+        SELECT t.TrackID, t.Title, a.Name AS ArtistName,
+               al.Title AS AlbumTitle, g.Name AS GenreName,
+               t.Duration, t.TrackURL
+        FROM Track t
+        LEFT JOIN Artist a ON t.ArtistID = a.ArtistID
+        LEFT JOIN Album al ON t.AlbumID = al.AlbumID
+        LEFT JOIN Genre g ON t.GenreID = g.GenreID
+        ORDER BY t.TrackID DESC
+        """;
+
+        try (Connection c = DriverManager.getConnection(DB_URL);
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                String duration = String.format("%d:%02d",
+                        rs.getInt("Duration") / 60,
+                        rs.getInt("Duration") % 60);
+
+                String fileName = Optional.ofNullable(rs.getString("TrackURL"))
+                        .map(p -> Paths.get(p).getFileName().toString())
+                        .orElse("—");
+
+                tableData.add(new TrackRow(
+                        rs.getInt("TrackID"),
+                        rs.getString("Title"),
+                        rs.getString("ArtistName"),
+                        rs.getString("AlbumTitle"),
+                        rs.getString("GenreName"),
+                        duration,
+                        fileName
+                ));
+            }
+        } catch (SQLException e) {
+            showError("Ошибка загрузки треков в таблицу");
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void chooseFileForTable() {
+        FileChooser fc = new FileChooser();
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Аудио", "*.mp3", "*.wav", "*.flac", "*.ogg", "*.m4a"));
+        File file = fc.showOpenDialog(getStage());
+
+        if (file != null) {
+            try {
+                AudioFile af = AudioFileIO.read(file);
+                Tag tag = af.getTagOrCreateAndSetDefault();
+
+                String fileName = file.getName();
+                TrackRow row = new TrackRow(
+                        0,
+                        getTag(tag, FieldKey.TITLE, file.getName().replaceAll("\\.[^.]+$", "")),
+                        getTag(tag, FieldKey.ARTIST, "Неизвестный исполнитель"),
+                        getTag(tag, FieldKey.ALBUM, ""),
+                        getTag(tag, FieldKey.GENRE, "Unknown").replaceAll("\\s*\\(\\d+\\)", ""),
+                        String.format("%d:%02d", af.getAudioHeader().getTrackLength() / 60, af.getAudioHeader().getTrackLength() % 60),
+                        fileName
+                );
+                row.setNew(true);
+
+                // Сохраняем файл во временном хранилище
+                newFiles.put(fileName, file);
+
+                tableData.add(0, row);
+                showSuccess("Файл добавлен в таблицу: " + fileName);
+            } catch (Exception e) {
+                showError("Ошибка чтения файла: " + e.getMessage());
+            }
+        }
+    }
+
+    private String getTag(Tag tag, FieldKey key, String defaultValue) {
+        if (tag == null) return defaultValue;
+        String value = tag.getFirst(key);
+        return (value != null && !value.trim().isEmpty()) ? value.trim() : defaultValue;
+    }
+
+    @FXML
+    private void saveTableChanges() {
+        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+            conn.setAutoCommit(false);
+
+            for (TrackRow row : tableData) {
+                if (row.isNew()) {
+                    addTrackFromRow(conn, row);
+                } else {
+                    updateTrackFromRow(conn, row);
+                }
+            }
+            conn.commit();
+            newFiles.clear(); // Очищаем хранилище после сохранения
+            showSuccess("Все изменения сохранены!");
+            loadAllTracksToTable();
+        } catch (Exception e) {
+            showError("Ошибка сохранения: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void addTrackFromRow(Connection conn, TrackRow row) throws Exception {
+        Path destDir = Paths.get(TRACKS_DIR);
+        Files.createDirectories(destDir);
+
+        String fileName = row.getFileName();
+        File sourceFile = newFiles.get(fileName);
+
+        if (sourceFile == null) {
+            throw new Exception("Файл не найден: " + fileName);
+        }
+
+        String ext = fileName.substring(fileName.lastIndexOf("."));
+        String newName = System.currentTimeMillis() + "_" + row.getTitle().replaceAll("[^a-zA-Z0-9_.-]", "_") + ext;
+        Path dest = destDir.resolve(newName);
+
+        Files.copy(sourceFile.toPath(), dest, StandardCopyOption.REPLACE_EXISTING);
+
+        int genreId = getOrCreateGenre(conn, row.getGenre());
+        int artistId = getOrCreateArtist(conn, row.getArtist(), genreId);
+        Integer albumId = row.getAlbum().isEmpty() ? null : getOrCreateAlbum(conn, row.getAlbum(), artistId);
+
+        String sql = "INSERT INTO Track (Title, ArtistID, AlbumID, Duration, TrackURL, GenreID) VALUES (?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, row.getTitle());
+            ps.setInt(2, artistId);
+            if (albumId == null) ps.setNull(3, Types.INTEGER); else ps.setInt(3, albumId);
+            ps.setInt(4, parseDuration(row.getDuration()));
+            ps.setString(5, TRACKS_DIR + "/" + newName);
+            ps.setInt(6, genreId);
+            ps.executeUpdate();
+        }
+    }
+
+    private void updateTrackFromRow(Connection conn, TrackRow row) throws SQLException {
+        int genreId = getOrCreateGenre(conn, row.getGenre());
+        int artistId = getOrCreateArtist(conn, row.getArtist(), genreId);
+        Integer albumId = row.getAlbum().isEmpty() ? null : getOrCreateAlbum(conn, row.getAlbum(), artistId);
+
+        String sql = "UPDATE Track SET Title=?, ArtistID=?, AlbumID=?, GenreID=? WHERE TrackID=?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, row.getTitle());
+            ps.setInt(2, artistId);
+            if (albumId == null) ps.setNull(3, Types.INTEGER); else ps.setInt(3, albumId);
+            ps.setInt(4, genreId);
+            ps.setInt(5, row.getTrackId());
+            ps.executeUpdate();
+        }
+    }
+
+    private int parseDuration(String dur) {
+        String[] p = dur.split(":");
+        return Integer.parseInt(p[0]) * 60 + Integer.parseInt(p[1]);
+    }
+
+    @FXML
+    private void refreshData() {
+        if (isTableMode) {
+            loadAllTracksToTable();
+        } else {
+            loadArtists();
+            loadGenres();
+        }
     }
 
     private void resetStatus() {
         statusLabel.setText("");
-        statusLabel.setStyle(null); // Сбросить стиль
+        statusLabel.setStyle(null);
     }
 
-    // --- Загрузка данных из БД ---
     private void loadArtists() {
         artistComboBox.getItems().clear();
-        // Используем константу DB_URL
         try (Connection c = DriverManager.getConnection(DB_URL);
              Statement s = c.createStatement();
              ResultSet rs = s.executeQuery("SELECT Name FROM Artist ORDER BY Name")) {
@@ -79,7 +325,6 @@ public class AddTrackController {
 
     private void loadGenres() {
         genreComboBox.getItems().clear();
-        // Используем константу DB_URL
         try (Connection c = DriverManager.getConnection(DB_URL);
              Statement s = c.createStatement();
              ResultSet rs = s.executeQuery("SELECT Name FROM Genre ORDER BY Name")) {
@@ -92,56 +337,45 @@ public class AddTrackController {
         }
     }
 
-    // --- Выбор файла ---
     @FXML
     private void chooseFile() {
         FileChooser fc = new FileChooser();
         fc.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Аудиофайлы", "*.mp3", "*.wav", "*.flac", "*.ogg", "*.m4a"), // Добавил m4a
+                new FileChooser.ExtensionFilter("Аудиофайлы", "*.mp3", "*.wav", "*.flac", "*.ogg", "*.m4a"),
                 new FileChooser.ExtensionFilter("Все файлы", "*.*")
         );
 
-        // Передаем текущую Stage (окно), чтобы диалоговое окно было модальным
-        Stage stage = (Stage) filePathLabel.getScene().getWindow();
-        selectedFile = fc.showOpenDialog(stage);
+        selectedFile = fc.showOpenDialog(getStage());
 
         if (selectedFile != null) {
             filePathLabel.setText(selectedFile.getName());
-            resetStatus(); // Сброс статуса
+            resetStatus();
 
-            // Чтение метаданных
             try {
                 AudioFile audioFile = AudioFileIO.read(selectedFile);
                 int duration = audioFile.getAudioHeader().getTrackLength();
-                // Форматирование длительности (уже было корректно)
                 durationLabel.setText(String.format("%d:%02d", duration / 60, duration % 60));
 
                 Tag tag = audioFile.getTagOrCreateAndSetDefault();
                 if (tag != null && !tag.isEmpty()) {
-                    // TITLE
                     String titleFromTag = getTagValue(tag, FieldKey.TITLE);
                     if (!titleFromTag.isEmpty() && titleField.getText().isEmpty()) {
                         titleField.setText(titleFromTag);
                     }
 
-                    // ARTIST
                     String artistFromTag = getTagValue(tag, FieldKey.ARTIST);
                     if (!artistFromTag.isEmpty()) {
                         setComboBoxValue(artistComboBox, artistFromTag);
                     } else if (artistComboBox.getValue() == null) {
-                        // Установить пустое значение, если из тега ничего нет и комбобокс пуст
                         artistComboBox.setValue(null);
                     }
 
-                    // ALBUM
                     String albumFromTag = getTagValue(tag, FieldKey.ALBUM);
                     if (!albumFromTag.isEmpty()) {
                         albumField.setText(albumFromTag);
                     }
 
-                    // GENRE
                     String genreFromTag = getTagValue(tag, FieldKey.GENRE);
-                    // Удаляем скобки с числами, если есть (например, "Pop (13)")
                     genreFromTag = genreFromTag.replaceAll("\\s*\\(\\d+\\)\\s*", "").trim();
                     if (!genreFromTag.isEmpty()) {
                         setComboBoxValue(genreComboBox, genreFromTag);
@@ -155,19 +389,17 @@ public class AddTrackController {
                 e.printStackTrace();
             }
         } else {
-            selectedFile = null; // Убедиться, что файл не выбран
+            selectedFile = null;
             filePathLabel.setText("Не выбран");
             durationLabel.setText("—");
         }
     }
 
-    // Вспомогательный метод для более чистого извлечения и обработки тегов
     private String getTagValue(Tag tag, FieldKey key) {
         String value = tag.getFirst(key);
         return (value != null) ? value.trim() : "";
     }
 
-    // Вспомогательный метод для установки значения ComboBox (с добавлением, если нет)
     private void setComboBoxValue(ComboBox<String> comboBox, String value) {
         if (!comboBox.getItems().contains(value)) {
             comboBox.getItems().add(value);
@@ -175,26 +407,20 @@ public class AddTrackController {
         comboBox.setValue(value);
     }
 
-    // --- Добавление трека ---
     @FXML
     private void addTrack() {
-        // Проверка наличия выбранного файла
         if (selectedFile == null) {
             showError("Выберите файл!");
             return;
         }
 
-        // Санитизация и извлечение данных
         String title = titleField.getText().trim();
-        // Используем Optional для более безопасной работы с ComboBox.getValue()
         String artistName = Optional.ofNullable(artistComboBox.getValue()).orElse("").trim();
         String album = albumField.getText().trim();
         String genreName = Optional.ofNullable(genreComboBox.getValue()).orElse("").trim();
 
-        // Проверки на обязательные поля
         if (title.isEmpty()) {
-            // Если названия нет, используем имя файла (уже было корректно)
-            title = selectedFile.getName().replaceAll("\\.\\w+$", ""); // Удаляем расширение файла
+            title = selectedFile.getName().replaceAll("\\.\\w+$", "");
         }
 
         if (artistName.isEmpty()) {
@@ -208,43 +434,36 @@ public class AddTrackController {
         }
 
         try (Connection conn = DriverManager.getConnection(DB_URL)) {
-            conn.setAutoCommit(false); // Начало транзакции
+            conn.setAutoCommit(false);
 
             try {
-                // Если альбом пуст, передаем null, иначе получаем/создаем ID
                 int genreId = getOrCreateGenre(conn, genreName);
                 int artistId = getOrCreateArtist(conn, artistName, genreId);
                 Integer albumId = album.isEmpty() ? null : getOrCreateAlbum(conn, album, artistId);
 
-                // --- Копирование файла ---
                 Path tracksDir = Path.of(TRACKS_DIR);
                 if (!Files.exists(tracksDir)) {
-                    Files.createDirectories(tracksDir); // Используем createDirectories для надежности
+                    Files.createDirectories(tracksDir);
                 }
 
-                // Создаем уникальное имя файла
                 String fileExtension = getFileExtension(selectedFile);
                 String uniqueFileName = System.currentTimeMillis() + "_" + title.replaceAll("[^a-zA-Z0-9_.-]", "_") + fileExtension;
                 Path dest = tracksDir.resolve(uniqueFileName);
 
-                // Проверяем, что файл не скопирован сам в себя
                 if (!selectedFile.toPath().equals(dest)) {
                     Files.copy(selectedFile.toPath(), dest, StandardCopyOption.REPLACE_EXISTING);
                 } else {
-                    // Это маловероятно, но на всякий случай
                     throw new IOException("Исходный и конечный файл совпадают. Операция отменена.");
                 }
 
                 String dbPath = TRACKS_DIR + "/" + uniqueFileName;
-                int durationSeconds = getDurationSeconds(selectedFile); // Получаем длительность
+                int durationSeconds = getDurationSeconds(selectedFile);
 
-                // --- Добавление трека в БД ---
                 String sql = "INSERT INTO Track (Title, ArtistID, AlbumID, Duration, TrackURL, GenreID) VALUES (?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setString(1, title);
                     ps.setInt(2, artistId);
 
-                    // Правильное использование setNull для AlbumID
                     if (albumId == null) {
                         ps.setNull(3, java.sql.Types.INTEGER);
                     } else {
@@ -253,25 +472,17 @@ public class AddTrackController {
 
                     ps.setInt(4, durationSeconds);
                     ps.setString(5, dbPath);
-                    ps.setInt(6, genreId); // Используем setInt, т.к. GenreID всегда int
+                    ps.setInt(6, genreId);
                     ps.executeUpdate();
                 }
 
-                conn.commit(); // Подтверждение транзакции
+                conn.commit();
                 showSuccess("Трек успешно добавлен!");
                 clearForm();
 
             } catch (Exception e) {
-                conn.rollback(); // Откат транзакции при ошибке
+                conn.rollback();
                 showError("Ошибка добавления трека: " + e.getMessage());
-                // Если файл был скопирован, пытаемся его удалить при откате
-                try {
-                    if (Path.of(TRACKS_DIR).resolve(getFileExtension(selectedFile)).toFile().exists()) {
-                        Files.deleteIfExists(Path.of(TRACKS_DIR).resolve(getFileExtension(selectedFile)));
-                    }
-                } catch (IOException ioException) {
-                    System.err.println("Не удалось удалить скопированный файл при откате: " + ioException.getMessage());
-                }
                 e.printStackTrace();
             }
 
@@ -281,22 +492,22 @@ public class AddTrackController {
         }
     }
 
-    // Вспомогательный метод для получения расширения файла
+    // Исправленный метод для обработки в классическом режиме
+    @FXML
+    private void addTrackClassic() {
+        addTrack();
+    }
+
     private String getFileExtension(File file) {
         String name = file.getName();
         int lastIndexOf = name.lastIndexOf(".");
         if (lastIndexOf == -1) {
-            return ""; // нет расширения
+            return "";
         }
         return name.substring(lastIndexOf);
     }
 
-
-    // --- Вспомогательные методы для БД ---
-
     private int getDurationSeconds(File file) throws Exception {
-        // Убрал @throws Exception из сигнатуры, заменил на конкретные (IOException, TagException, ReadOnlyFileException и т.д.)
-        // но оставил Exception для совместимости с jaudiotagger
         AudioFile af = AudioFileIO.read(file);
         return af.getAudioHeader().getTrackLength();
     }
@@ -307,14 +518,12 @@ public class AddTrackController {
         }
         name = name.trim();
 
-        // 1. Ищем существующего исполнителя
         try (PreparedStatement ps = conn.prepareStatement(
                 "SELECT ArtistID FROM Artist WHERE LOWER(Name) = LOWER(?)")) {
             ps.setString(1, name);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     int existingId = rs.getInt(1);
-                    // Обновляем GenreID, если он пустой или 0
                     try (PreparedStatement updatePs = conn.prepareStatement(
                             "UPDATE Artist SET GenreID = ? WHERE ArtistID = ? AND (GenreID IS NULL OR GenreID = 0)")) {
                         updatePs.setInt(1, genreId);
@@ -327,12 +536,11 @@ public class AddTrackController {
             }
         }
 
-        // 2. Создаём нового с GenreID
         try (PreparedStatement ps = conn.prepareStatement(
                 "INSERT INTO Artist (Name, GenreID) VALUES (?, ?)",
                 Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, name);
-            ps.setInt(2, genreId);  // ← Теперь правильно: int!
+            ps.setInt(2, genreId);
             ps.executeUpdate();
 
             try (ResultSet keys = ps.getGeneratedKeys()) {
@@ -348,9 +556,7 @@ public class AddTrackController {
 
     private Integer getOrCreateAlbum(Connection c, String title, int artistId) throws SQLException {
         title = title.trim();
-        // 1. Поиск существующего
-        // В SQLite сравнение строк по умолчанию не чувствительно к регистру (в отличие от MySQL),
-        // но для лучшей совместимости добавил LOWER
+
         try (PreparedStatement ps = c.prepareStatement("SELECT AlbumID FROM Album WHERE LOWER(Title) = LOWER(?) AND ArtistID = ?")) {
             ps.setString(1, title);
             ps.setInt(2, artistId);
@@ -359,7 +565,6 @@ public class AddTrackController {
             }
         }
 
-        // 2. Создание нового
         try (PreparedStatement ps = c.prepareStatement(
                 "INSERT INTO Album (Title, ArtistID) VALUES (?, ?)",
                 Statement.RETURN_GENERATED_KEYS)) {
@@ -370,7 +575,7 @@ public class AddTrackController {
                 if (rs.next()) return rs.getInt(1);
             }
         }
-        return null; // Возвращаем null, если не удалось создать альбом (что должно быть перехвачено выше)
+        return null;
     }
 
     private int getOrCreateGenre(Connection conn, String name) throws SQLException {
@@ -379,7 +584,6 @@ public class AddTrackController {
         }
         name = name.trim();
 
-        // 1. Поиск существующего
         try (PreparedStatement ps = conn.prepareStatement("SELECT GenreID FROM Genre WHERE LOWER(Name) = LOWER(?)")) {
             ps.setString(1, name);
             try (ResultSet rs = ps.executeQuery()) {
@@ -387,7 +591,6 @@ public class AddTrackController {
             }
         }
 
-        // 2. Создание нового
         try (PreparedStatement ps = conn.prepareStatement(
                 "INSERT INTO Genre (Name) VALUES (?)",
                 Statement.RETURN_GENERATED_KEYS)) {
@@ -395,7 +598,7 @@ public class AddTrackController {
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) {
-                    loadGenres(); // Обновляем список жанров в ComboBox
+                    loadGenres();
                     return keys.getInt(1);
                 }
             }
@@ -403,18 +606,15 @@ public class AddTrackController {
         throw new SQLException("Не удалось создать жанр: " + name);
     }
 
-    // --- Вспомогательные методы UI ---
-
     private void showSuccess(String message) {
-        statusLabel.setStyle("-fx-text-fill: #27ae60;"); // Зеленый цвет
+        statusLabel.setStyle("-fx-text-fill: #27ae60;");
         statusLabel.setText(message);
     }
 
     private void showError(String message) {
-        statusLabel.setStyle("-fx-text-fill: #c0392b;"); // Красный цвет
+        statusLabel.setStyle("-fx-text-fill: #c0392b;");
         statusLabel.setText(message);
     }
-
 
     private void clearForm() {
         titleField.clear();
@@ -424,17 +624,17 @@ public class AddTrackController {
         selectedFile = null;
         artistComboBox.setValue(null);
         genreComboBox.setValue(null);
-        // Повторная загрузка списков после добавления нового исполнителя/жанра (уже сделано в getOrCreate...)
-        // loadArtists();
-        // loadGenres();
     }
 
     @FXML
     private void closeWindow() {
-        // Безопасное приведение и закрытие Stage
         Stage stage = (Stage) titleField.getScene().getWindow();
         if (stage != null) {
             stage.close();
         }
+    }
+
+    private Stage getStage() {
+        return (Stage) (filePathLabel != null ? filePathLabel.getScene().getWindow() : null);
     }
 }
