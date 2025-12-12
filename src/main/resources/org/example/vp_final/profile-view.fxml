@@ -101,12 +101,6 @@
             <Separator prefWidth="300"/>
             <VBox spacing="8">
 
-                <Button text="Тема приложения"
-                        style="-fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-font-size: 16; -fx-pref-width: 350;"/>
-
-                <Button text="Уведомления"
-                        style="-fx-background-color: transparent; -fx-alignment: CENTER_LEFT; -fx-font-size: 16; -fx-pref-width: 350;"/>
-
                 <Button text="Добавить трек" onAction="#openAddTrackWindow"
                         style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;"/>
                 <!-- Раскрывающийся блок "О приложении" -->

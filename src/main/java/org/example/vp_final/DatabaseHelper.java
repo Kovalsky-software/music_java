@@ -15,9 +15,18 @@ public class DatabaseHelper {
                 """
                 CREATE TABLE IF NOT EXISTS User (
                     UserID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Username TEXT NOT NULL UNIQUE,
-                    Email TEXT NOT NULL UNIQUE,
-                    PasswordHash TEXT NOT NULL
+                    Username NVARCHAR(100) NOT NULL UNIQUE,
+                    Email NVARCHAR(300) NOT NULL UNIQUE,
+                    PasswordHash NVARCHAR(500) NOT NULL
+                );
+                """,
+
+                // Жанры
+                """
+                CREATE TABLE IF NOT EXISTS Genre (
+                    GenreID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Name NVARCHAR(500) NOT NULL UNIQUE,
+                    Description NVARCHAR(500)
                 );
                 """,
 
@@ -25,42 +34,9 @@ public class DatabaseHelper {
                 """
                 CREATE TABLE IF NOT EXISTS Artist (
                     ArtistID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Name TEXT NOT NULL,  /* <-- ЗДЕСЬ ДОБАВЛЕНА ЗАПЯТАЯ */
-                    Genre Text NOT NULL
-                );
-                """,
-
-                // === ПЛЕЙЛИСТЫ ===
-                """
-                CREATE TABLE IF NOT EXISTS Playlist (
-                    PlaylistID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    UserID INTEGER NOT NULL,
-                    Title TEXT NOT NULL,
-                    CreatedAt TEXT DEFAULT (datetime('now')),
-                    FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE
-                );
-                """,
-
-                // === АФИША ===
-                """
-                CREATE TABLE IF NOT EXISTS Afisha (
-                    AfishaID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Title TEXT NOT NULL,
-                    Date TEXT NOT NULL,
-                    Location TEXT,
-                    ArtistGenre TEXT,
-                    Description TEXT
-                );
-                """,
-
-                // === ЛЮБИМЫЕ АВТОРЫ ===
-                """
-                CREATE TABLE IF NOT EXISTS UserLikeAuthor (
-                    UserID INTEGER,
-                    ArtistID INTEGER,
-                    PRIMARY KEY (UserID, ArtistID),
-                    FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE,
-                    FOREIGN KEY (ArtistID) REFERENCES Artist(ArtistID) ON DELETE CASCADE
+                    Name NVARCHAR(300) NOT NULL UNIQUE,
+                    GenreID INTEGER,
+                    FOREIGN KEY(GenreID) REFERENCES Genre(GenreID)
                 );
                 """,
 
@@ -68,19 +44,10 @@ public class DatabaseHelper {
                 """
                 CREATE TABLE IF NOT EXISTS Album (
                     AlbumID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Title TEXT NOT NULL,
+                    Title NVARCHAR(500) NOT NULL,
                     ArtistID INTEGER,
-                    ReleaseDate TEXT,
+                    ReleaseDate NVARCHAR(500),
                     FOREIGN KEY (ArtistID) REFERENCES Artist(ArtistID) ON DELETE SET NULL
-                );
-                """,
-
-                // добавление жанров в поиске
-                """
-                CREATE TABLE IF NOT EXISTS Genre (
-                    GenreID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Name TEXT NOT NULL UNIQUE,
-                    Description TEXT
                 );
                 """,
 
@@ -88,14 +55,36 @@ public class DatabaseHelper {
                 """
                 CREATE TABLE IF NOT EXISTS Track (
                     TrackID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Title TEXT NOT NULL,
+                    Title NVARCHAR(500) NOT NULL,
                     ArtistID INTEGER,
                     AlbumID INTEGER,
                     Duration INTEGER,
+                    TrackURL NVARCHAR(1000),
                     GenreID INTEGER,
-                    TrackURL TEXT,
                     FOREIGN KEY (ArtistID) REFERENCES Artist(ArtistID) ON DELETE SET NULL,
                     FOREIGN KEY (AlbumID) REFERENCES Album(AlbumID) ON DELETE SET NULL
+                );
+                """,
+
+                // Плейлисты
+                """
+                CREATE TABLE IF NOT EXISTS Playlist (
+                    PlaylistID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    UserID INTEGER,
+                    Title NVARCHAR(300) NOT NULL,
+                    CreationDate NVARCHAR(500) DEFAULT (datetime('now')),
+                    FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE
+                );
+                """,
+
+                // Афиша
+                """
+                CREATE TABLE IF NOT EXISTS Afisha (
+                    AfishaID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Title NVARCHAR(500) NOT NULL,
+                    Date NVARCHAR(500) NOT NULL,
+                    Location NVARCHAR(300),
+                    Description NVARCHAR(400)
                 );
                 """,
 
@@ -110,7 +99,7 @@ public class DatabaseHelper {
                 );
                 """,
 
-                // Лайки
+                // Лайки треков
                 """
                 CREATE TABLE IF NOT EXISTS UserLike (
                     UserID INTEGER,
@@ -121,59 +110,34 @@ public class DatabaseHelper {
                 );
                 """,
 
-                // Планы подписки
+                // Любимые авторы
                 """
-                CREATE TABLE IF NOT EXISTS SubscriptionPlan (
-                    PlanID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Name TEXT NOT NULL UNIQUE,
-                    Price REAL NOT NULL,
-                    Description TEXT
-                );
-                """,
-
-                """
-                CREATE TABLE IF NOT EXISTS UserLikePlaylist(
-                                PlaylistID INTEGER,
-                                UserID INTEGER,
-                                PRIMARY KEY (PlaylistID, UserID), /* <-- ИСПРАВЛЕНИЕ: Установка составного ключа */
-                                FOREIGN KEY (PlaylistID) REFERENCES Playlist(PlaylistID) ON DELETE CASCADE,
-                                FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE
-                                )
-                """,
-
-                // Платежи
-                """
-                CREATE TABLE IF NOT EXISTS Payment (
-                    PaymentID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    UserID INTEGER NOT NULL,
-                    PlanID INTEGER NOT NULL,
-                    Amount REAL NOT NULL,
-                    PaymentDate TEXT DEFAULT (datetime('now')),
-                    Method TEXT,
+                CREATE TABLE IF NOT EXISTS UserLikeAuthor (
+                    UserID INTEGER,
+                    ArtistID INTEGER,
+                    PRIMARY KEY (UserID, ArtistID),
                     FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE,
-                    FOREIGN KEY (PlanID) REFERENCES SubscriptionPlan(PlanID)
+                    FOREIGN KEY (ArtistID) REFERENCES Artist(ArtistID) ON DELETE CASCADE
                 );
                 """,
 
-                // Настройки приложения (для сохранения состояния)
+                // Любимые плейлисты
+                """
+                CREATE TABLE IF NOT EXISTS UserLikePlaylist (
+                    UserLikePlaylistID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    PlaylistID INTEGER NOT NULL,
+                    UserID INTEGER NOT NULL,
+                    FOREIGN KEY (PlaylistID) REFERENCES Playlist(PlaylistID) ON DELETE CASCADE,
+                    FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE,
+                    UNIQUE(PlaylistID, UserID)
+                );
+                """,
+
+                // Настройки приложения
                 """
                 CREATE TABLE IF NOT EXISTS Settings (
-                    Key TEXT PRIMARY KEY,
-                    Value TEXT
-                );
-                """,
-
-                // Активные подписки
-                """
-                CREATE TABLE IF NOT EXISTS UserSubscription (
-                    UserID INTEGER,
-                    PlanID INTEGER,
-                    StartDate TEXT NOT NULL,
-                    EndDate TEXT,
-                    IsActive BOOLEAN DEFAULT 1,
-                    PRIMARY KEY (UserID, PlanID),
-                    FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE,
-                    FOREIGN KEY (PlanID) REFERENCES SubscriptionPlan(PlanID)
+                    Key NVARCHAR(200) PRIMARY KEY,
+                    Value NVARCHAR(500)
                 );
                 """
         };
@@ -186,31 +150,11 @@ public class DatabaseHelper {
                 stmt.execute(sql);
             }
 
-
-
             System.out.println("База данных инициализирована успешно.");
         } catch (SQLException e) {
             System.err.println("Ошибка при инициализации БД: " + e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    private static void tryPreparedStatement(Connection conn, String sql, String value) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, value);
-            ps.executeUpdate();
-        }
-    }
-
-    private static int getArtistId(Connection conn, String name) throws SQLException {
-        String sql = "SELECT ArtistID FROM Artist WHERE Name = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, name);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt(1);
-            }
-        }
-        return -1;
     }
 
     private static String generateSalt() {
@@ -241,144 +185,12 @@ public class DatabaseHelper {
 
             pstmt.setString(1, username);
             pstmt.setString(2, email);
-            pstmt.setString(3, hash + ":" + salt); // храним hash:salt в одном поле
+            pstmt.setString(3, hash + ":" + salt);
 
             pstmt.executeUpdate();
             return true;
         } catch (SQLException e) {
             System.out.println("Регистрация не удалась: " + e.getMessage());
-            return false;
-        }
-    }
-
-    private static void saveSetting(String key, String value) {
-        String sql = "INSERT OR REPLACE INTO Settings (Key, Value) VALUES (?, ?)";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, key);
-            pstmt.setString(2, value);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            System.err.println("Ошибка сохранения настройки: " + key);
-        }
-    }
-
-    public static boolean isTrackLiked(int userId, int trackId) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM UserLike WHERE UserID = ? AND TrackID = ?";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, userId);
-            pstmt.setInt(2, trackId);
-            ResultSet rs = pstmt.executeQuery();
-            return rs.next() && rs.getInt(1) > 0;
-        }
-    }
-
-    public static void addToFavorites(int userId, int trackId) throws SQLException {
-        String sql = "INSERT INTO UserLike (UserID, TrackID) VALUES (?, ?)";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, userId);
-            pstmt.setInt(2, trackId);
-            pstmt.executeUpdate();
-        }
-    }
-
-    public static void removeFromFavorites(int userId, int trackId) throws SQLException {
-        String sql = "DELETE FROM UserLike WHERE UserID = ? AND TrackID = ?";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, userId);
-            pstmt.setInt(2, trackId);
-            pstmt.executeUpdate();
-        }
-    }
-
-    private static String loadSetting(String key, String defaultValue) {
-        String sql = "SELECT Value FROM Settings WHERE Key = ?";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, key);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getString("Value");
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Ошибка загрузки настройки: " + key);
-        }
-        return defaultValue;
-    }
-
-    // --- Методы для работы с окном ---
-
-    public static void saveWindowState(double x, double y, double width, double height) {
-        saveSetting("window_x", String.valueOf(x));
-        saveSetting("window_y", String.valueOf(y));
-        saveSetting("window_width", String.valueOf(width));
-        saveSetting("window_height", String.valueOf(height));
-    }
-
-    // Возвращает массив [x, y, width, height]
-    public static double[] loadWindowState() {
-        double x = Double.parseDouble(loadSetting("window_x", "100.0"));
-        double y = Double.parseDouble(loadSetting("window_y", "100.0"));
-        // Минимальные размеры окна (300x300, как вы просили, но сделаем чуть больше для удобства)
-        double width = Double.parseDouble(loadSetting("window_width", "800.0"));
-        double height = Double.parseDouble(loadSetting("window_height", "700.0"));
-
-        // Гарантируем минимальный размер
-        if (width < 300) width = 300;
-        if (height < 300) height = 300;
-
-        return new double[]{x, y, width, height};
-    }
-
-    // --- Методы для работы с пользователем ---
-
-    public static void saveLastLoggedInUser(int userId) {
-        saveSetting("last_user_id", String.valueOf(userId));
-    }
-
-    public static int loadLastLoggedInUserId() {
-        // Возвращаем -1, если пользователь не найден (значение по умолчанию)
-        return Integer.parseInt(loadSetting("last_user_id", "-1"));
-    }
-
-    // Вспомогательный метод для получения объекта User по ID
-    public static User getUserById(int userId) {
-        String sql = "SELECT UserID, Username, Email FROM User WHERE UserID = ?";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, userId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return new User(
-                            rs.getInt("UserID"),
-                            rs.getString("Username"),
-                            rs.getString("Email")
-                    );
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    // создание плейлиста в профиле
-    public static boolean createPlaylist(int userId, String title) {
-        // Убрано 'CreationDate' из списка столбцов, так как оно заполняется DEFAULT (datetime('now'))
-        String sql = "INSERT INTO Playlist (UserID, Title) VALUES (?, ?)";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, userId);
-            pstmt.setString(2, title);
-            pstmt.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            System.err.println("Ошибка создания плейлиста: " + title + " для UserID=" + userId);
-            e.printStackTrace();
             return false;
         }
     }
@@ -415,39 +227,149 @@ public class DatabaseHelper {
         return null;
     }
 
-    // ===================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ ДАЛЬНЕЙШЕГО РАЗВИТИЯ =====================
-
-    public static boolean isPremiumUser(int userId) {
-        String sql = """
-                SELECT 1 FROM UserSubscription us
-                JOIN SubscriptionPlan sp ON us.PlanID = sp.PlanID
-                WHERE us.UserID = ? AND us.IsActive = 1 AND sp.Name != 'Free'
-                LIMIT 1
-                """;
+    public static User getUserById(int userId) {
+        String sql = "SELECT UserID, Username, Email FROM User WHERE UserID = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, userId);
-            return pstmt.executeQuery().next();
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new User(
+                            rs.getInt("UserID"),
+                            rs.getString("Username"),
+                            rs.getString("Email")
+                    );
+                }
+            }
         } catch (SQLException e) {
-            return false;
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    // === Работа с лайками треков ===
+
+    public static boolean isTrackLiked(int userId, int trackId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM UserLike WHERE UserID = ? AND TrackID = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, trackId);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next() && rs.getInt(1) > 0;
         }
     }
 
-    // Пример: получить любимые треки пользователя
-    public static ResultSet getLikedTracks(int userId) throws SQLException {
-        String sql = """
-                SELECT t.TrackID, t.Title, a.Name AS ArtistName, al.Title AS AlbumTitle
-                FROM Track t
-                JOIN Artist a ON t.ArtistID = a.ArtistID
-                LEFT JOIN Album al ON t.AlbumID = al.AlbumID
-                JOIN UserLike ul ON t.TrackID = ul.TrackID
-                WHERE ul.UserID = ?
-                ORDER BY t.Title
-                """;
-        Connection conn = DriverManager.getConnection(DB_URL);
-        PreparedStatement pstmt = conn.prepareStatement(sql);
-        pstmt.setInt(1, userId);
-        return pstmt.executeQuery();
-        // Важно: вызывающий код должен закрывать ResultSet и Connection!
+    public static void addToFavorites(int userId, int trackId) throws SQLException {
+        String sql = "INSERT OR IGNORE INTO UserLike (UserID, TrackID) VALUES (?, ?)";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, trackId);
+            pstmt.executeUpdate();
+        }
+    }
+
+    public static void removeFromFavorites(int userId, int trackId) throws SQLException {
+        String sql = "DELETE FROM UserLike WHERE UserID = ? AND TrackID = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, trackId);
+            pstmt.executeUpdate();
+        }
+    }
+
+    // === Работа с настройками окна ===
+
+    private static void saveSetting(String key, String value) {
+        String sql = "INSERT OR REPLACE INTO Settings (Key, Value) VALUES (?, ?)";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            pstmt.setString(2, value);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Ошибка сохранения настройки: " + key);
+        }
+    }
+
+    private static String loadSetting(String key, String defaultValue) {
+        String sql = "SELECT Value FROM Settings WHERE Key = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("Value");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Ошибка загрузки настройки: " + key);
+        }
+        return defaultValue;
+    }
+
+    public static void saveWindowState(double x, double y, double width, double height) {
+        saveSetting("window_x", String.valueOf(x));
+        saveSetting("window_y", String.valueOf(y));
+        saveSetting("window_width", String.valueOf(width));
+        saveSetting("window_height", String.valueOf(height));
+    }
+
+    public static double[] loadWindowState() {
+        double x = parseDoubleSafe(loadSetting("window_x", "100.0"), 100.0);
+        double y = parseDoubleSafe(loadSetting("window_y", "100.0"), 100.0);
+        double width = parseDoubleSafe(loadSetting("window_width", "800.0"), 800.0);
+        double height = parseDoubleSafe(loadSetting("window_height", "700.0"), 700.0);
+
+        if (width < 300) width = 300;
+        if (height < 300) height = 300;
+
+        return new double[]{x, y, width, height};
+    }
+
+    private static double parseDoubleSafe(String value, double defaultValue) {
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            System.err.println("Ошибка парсинга double: " + value);
+            return defaultValue;
+        }
+    }
+
+    public static void saveLastLoggedInUser(int userId) {
+        saveSetting("last_user_id", String.valueOf(userId));
+    }
+
+    public static int loadLastLoggedInUserId() {
+        String value = loadSetting("last_user_id", "-1");
+        try {
+            // Если в БД хранится дробное число (например "1.0"), сначала парсим как double
+            if (value.contains(".")) {
+                return (int) Double.parseDouble(value);
+            }
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            System.err.println("Ошибка парсинга last_user_id: " + value);
+            return -1;
+        }
+    }
+
+    // === Работа с плейлистами ===
+
+    public static boolean createPlaylist(int userId, String title) {
+        String sql = "INSERT INTO Playlist (UserID, Title) VALUES (?, ?)";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setString(2, title);
+            pstmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Ошибка создания плейлиста: " + title + " для UserID=" + userId);
+            e.printStackTrace();
+            return false;
+        }
     }
 }

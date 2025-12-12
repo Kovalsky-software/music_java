@@ -6,7 +6,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.layout.*;
@@ -16,15 +15,12 @@ import java.util.ResourceBundle;
 
 public class SearchController implements Initializable {
 
-    // FXML поля
     @FXML private HBox genresContainer;
     @FXML private VBox tracksSection;
     @FXML private Label genreTitleLabel;
     @FXML private VBox tracksContainer;
     @FXML private VBox artistsSection;
     @FXML private VBox artistsContainer;
-
-    // FXML поля для поиска
     @FXML private TextField searchField;
     @FXML private ChoiceBox<String> searchTypeChoiceBox;
     @FXML private Label artistsTitleLabel;
@@ -32,15 +28,13 @@ public class SearchController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         loadGenres();
-        setupSearch(); // Инициализация логики поиска
+        setupSearch();
     }
 
     private void setupSearch() {
-        // Инициализация фильтра поиска
         searchTypeChoiceBox.getItems().addAll("Трек", "Артист");
-        searchTypeChoiceBox.setValue("Трек"); // Значение по умолчанию
+        searchTypeChoiceBox.setValue("Трек");
 
-        // Добавляем слушателя к полю ввода и ChoiceBox
         searchField.textProperty().addListener((observable, oldValue, newValue) -> {
             performSearch(newValue.trim(), searchTypeChoiceBox.getValue());
         });
@@ -82,7 +76,6 @@ public class SearchController implements Initializable {
                 "-fx-background-radius: 24; " +
                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0.3, 0, 8);");
 
-        // Эффект наведения
         card.setOnMouseEntered(e -> card.setScaleX(1.06));
         card.setOnMouseExited(e -> card.setScaleX(1.0));
         card.setCursor(Cursor.HAND);
@@ -115,22 +108,19 @@ public class SearchController implements Initializable {
         } + "-fx-background-radius: 16; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 4);";
     }
 
-    // ЛОГИКА ОТОБРАЖЕНИЯ ПО ЖАНРУ
     private void showTracksByGenre(int genreId, String genreName) {
-        // Устанавливаем заголовки по умолчанию для режима просмотра жанра
         genreTitleLabel.setText("Треки жанра: " + genreName);
         artistsTitleLabel.setText("Исполнители этого жанра");
 
         tracksContainer.getChildren().clear();
         artistsContainer.getChildren().clear();
 
-        // Показываем оба раздела
         tracksSection.setVisible(true);
         tracksSection.setManaged(true);
         artistsSection.setVisible(true);
         artistsSection.setManaged(true);
 
-        // SQL для треков: Используем t.Duration
+        // SQL для треков
         String trackSql = """
         SELECT t.Title, a.Name AS ArtistName, t.Duration 
         FROM Track t
@@ -139,11 +129,11 @@ public class SearchController implements Initializable {
         ORDER BY t.Title
         """;
 
-        // SQL для исполнителей: Используем Artist.Genre (это числовой ID)
+        // ИСПРАВЛЕНО: SQL для исполнителей - используем Artist.GenreID
         String artistSql = """
         SELECT ArtistID, Name
         FROM Artist
-        WHERE Genre = ?
+        WHERE GenreID = ?
         ORDER BY Name
         """;
 
@@ -156,7 +146,6 @@ public class SearchController implements Initializable {
                     while (rs.next()) {
                         String title = rs.getString("Title");
                         String artist = rs.getString("ArtistName");
-                        // Используем столбец Duration
                         int duration = rs.getInt("Duration");
                         displayTrackRow(title, artist, duration, tracksContainer);
                     }
@@ -165,7 +154,6 @@ public class SearchController implements Initializable {
 
             // === 2. Загрузка Исполнителей ===
             try (PreparedStatement ps = conn.prepareStatement(artistSql)) {
-                // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: привязываем числовой ID к Artist.Genre
                 ps.setInt(1, genreId);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
@@ -185,10 +173,6 @@ public class SearchController implements Initializable {
             e.printStackTrace();
         }
     }
-
-    // ====================================================================
-    // ЛОГИКА ПОИСКА
-    // ====================================================================
 
     private void performSearch(String query, String type) {
         tracksContainer.getChildren().clear();
@@ -213,7 +197,6 @@ public class SearchController implements Initializable {
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:music_app.db")) {
 
             if (isTrackSearch) {
-                // Поиск треков: Используем t.Duration
                 String sql = """
                 SELECT t.Title, a.Name AS ArtistName, t.Duration
                 FROM Track t
@@ -229,9 +212,7 @@ public class SearchController implements Initializable {
                     }
                 }
 
-            } else { // Артист Search
-
-                // Поиск артистов: table: Artist, column: Name
+            } else {
                 String sql = """
                 SELECT ArtistID, Name
                 FROM Artist
@@ -252,17 +233,12 @@ public class SearchController implements Initializable {
         }
     }
 
-    // ====================================================================
-    // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ОТОБРАЖЕНИЯ
-    // ====================================================================
-
     private void displayTrackResults(ResultSet rs, String query) throws SQLException {
         genreTitleLabel.setText("Результаты поиска треков по запросу: \"" + query + "\"");
         int count = 0;
         while (rs.next()) {
             String title = rs.getString("Title");
             String artist = rs.getString("ArtistName");
-            // Используем столбец Duration
             int duration = rs.getInt("Duration");
             displayTrackRow(title, artist, duration, tracksContainer);
             count++;
@@ -291,7 +267,6 @@ public class SearchController implements Initializable {
         }
     }
 
-    // Общий метод для создания строки трека
     private void displayTrackRow(String title, String artist, int duration, VBox container) {
         String durationFormatted = formatDuration(duration);
         if (artist == null) artist = "Неизвестный";
@@ -321,7 +296,6 @@ public class SearchController implements Initializable {
         container.getChildren().add(row);
     }
 
-    // Общий метод для создания строки артиста
     private void displayArtistRow(String name, VBox container) {
         HBox row = new HBox(15);
         row.setPadding(new Insets(12));
@@ -335,7 +309,6 @@ public class SearchController implements Initializable {
         nameLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
 
         row.getChildren().add(nameLabel);
-
         row.setOnMouseClicked(e -> System.out.println("Переход к исполнителю: " + name));
 
         container.getChildren().add(row);
